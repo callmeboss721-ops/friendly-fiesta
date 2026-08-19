@@ -4,7 +4,7 @@
 // ============================================================
 import { NextRequest, NextResponse } from 'next/server';
 import * as UI from '@/lib/botUi';
-import { sendMessage, editMessage, answerCallback, uploadSlipFromTelegram, sendSticker,  } from '@/lib/telegram';
+import { sendMessage, editMessage, answerCallback, uploadSlipFromTelegram, sendSticker, isUnreachableChatError } from '@/lib/telegram';
 import { getSession, setSession, clearSession } from '@/lib/botSessions';
 import LiveMessageService from '@/lib/liveMessage';
 import {
@@ -216,6 +216,19 @@ export async function POST(req: NextRequest) {
     } catch { /* noop */ }
     // #endregion
     log(`⚠️ webhook error: ${e?.message || e}`, e?.stack?.slice(0, 200));
+    if (isUnreachableChatError(e)) {
+      // #region agent log
+      try {
+        agentLog('C', 'webhook/route.ts:POST-catch', 'unreachable_chat_acked', {
+          claimedUpdateId,
+          failureChatId,
+          errorMessage: String(e?.message || e).slice(0, 300),
+        });
+      } catch { /* noop */ }
+      // #endregion
+      // Keep the claim so Telegram does not retry a chat that cannot receive messages.
+      return NextResponse.json({ ok: true, skipped: 'unreachable_chat' });
+    }
     if (failureChatId != null) {
       try {
         await sendMessage(failureChatId, UI.error('ระบบยังดำเนินการไม่ได้ — รอสักครู่แล้วลองคำสั่งเดิมอีกครั้ง'));

@@ -18,6 +18,7 @@ export default class LiveMessageService {
     const { transactionId, chatId, userId, ledgerRef, adminName } = opts;
     try {
       const msgId = await sendMessage(chatId, UI.liveInitial(ledgerRef, adminName ?? undefined));
+      if (!msgId) return { liveMessageId: null };
       // persist in sessions (best-effort)
       try {
         if (userId) await setSession(chatId, userId, { live_message_id: msgId, live_tx_id: transactionId });
