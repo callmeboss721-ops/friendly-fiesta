@@ -6,7 +6,9 @@
 # .env.local so the Next.js dev server talks to it.
 #
 # Safe to run on every boot: it detects existing state and only does
-# what is missing. It never prints secrets and uses the well-known
+# what is missing. Concurrent callers (Cloud Agent `start` + `next-dev`)
+# serialize on a file lock so a second `supabase start` cannot stop the
+# first run's containers. It never prints secrets and uses the well-known
 # local-Supabase demo JWT secret (dev-only, not a production secret).
 # ============================================================
 set -uo pipefail
@@ -15,6 +17,7 @@ log() { echo "[cloud-supabase-up] $*"; }
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
+LOCK_FILE="${TMPDIR:-/tmp}/cloud-supabase-up.lock"
 
 # Local-Supabase default HS256 secret (deterministic dev keys; not a real secret)
 LOCAL_JWT_SECRET="super-secret-jwt-token-with-at-least-32-characters-long"
@@ -142,6 +145,12 @@ SQL
 }
 
 main() {
+  exec 9>"$LOCK_FILE"
+  if ! flock -w 180 9; then
+    log "timed out waiting for another cloud-supabase-up instance"
+    exit 0
+  fi
+
   read -r ANON SR < <(mint_keys)
   write_env_local "$ANON" "$SR"
 

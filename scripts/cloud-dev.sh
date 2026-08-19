@@ -12,7 +12,20 @@ set -uo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+# If Cloud Agent `start` is still running, wait so we do not race
+# `supabase start` (a concurrent stop/retry can tear the stack down).
+START_STATUS="/tmp/cursor/start-user/start-user.status"
+START_SCRIPT="/tmp/cursor/start-user/start-user.sh"
+if [ -f "$START_SCRIPT" ] && [ ! -f "$START_STATUS" ]; then
+  echo "[cloud-dev] waiting for environment start to finish..."
+  for _ in $(seq 1 90); do
+    [ -f "$START_STATUS" ] && break
+    sleep 2
+  done
+fi
+
 # Bring up (or reuse) the local Supabase stack; never fatal for the dev server.
+# Serialized with `start` via flock inside cloud-supabase-up.sh.
 bash scripts/cloud-supabase-up.sh || true
 
 # Load local dev env with override (guarantees the app targets local Supabase).
