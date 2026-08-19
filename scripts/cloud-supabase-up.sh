@@ -113,7 +113,8 @@ apply_schema() {
     docker exec -i "$DB_CONTAINER" psql -U postgres -d postgres -v ON_ERROR_STOP=0 -f /tmp/schema.sql >/tmp/ce-schema.log 2>&1 || true
     for f in patch-v2 patch-v3 patch-v4-perf patch-v5 patch-v6 patch-v7 patch-v8 \
              patch-v9_add_live_message_fields patch-v10-production-safety \
-             patch-v11-admin-console patch-v12-bot-metrics; do
+             patch-v11-admin-console patch-v12-bot-metrics \
+             patch-v13-postgres-best-practices; do
       [ -f "supabase/$f.sql" ] || continue
       docker cp "supabase/$f.sql" "$DB_CONTAINER":/tmp/p.sql >/dev/null 2>&1 || true
       docker exec -i "$DB_CONTAINER" psql -U postgres -d postgres -v ON_ERROR_STOP=0 -f /tmp/p.sql >>/tmp/ce-schema.log 2>&1 || true

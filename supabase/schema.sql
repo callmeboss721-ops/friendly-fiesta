@@ -40,15 +40,30 @@ create index if not exists idx_pinned_bank_accounts_lookup on public.pinned_bank
 
 -- 4) receivers
 create table if not exists public.receivers (
-  id               uuid primary key default gen_random_uuid(),
-  name             text not null,
-  bank_name        text,
-  account_number   text,
-  last4            text,
-  total_volume_thb numeric(20,2) not null default 0,
-  created_at       timestamptz not null default now(),
-  updated_at       timestamptz not null default now()
+  id                   uuid primary key default gen_random_uuid(),
+  name                 text,
+  bank_name            text,
+  account_number       text,
+  last4                text,
+  total_volume_thb     numeric(20,2) not null default 0,
+  account_hash         text,
+  bank                 text,
+  receiver_name        text,
+  account_last4        text,
+  total_transactions   integer       not null default 0,
+  total_amount_thb     numeric(20,2) not null default 0,
+  total_usdt           numeric(20,4) not null default 0,
+  max_amount_thb       numeric(20,2) not null default 0,
+  last_amount_thb      numeric(20,2) not null default 0,
+  first_transaction_at timestamptz,
+  last_transaction_at  timestamptz,
+  last_ledger_ref      text,
+  status               text          not null default 'normal',
+  created_at           timestamptz not null default now(),
+  updated_at           timestamptz not null default now()
 );
+create unique index if not exists uq_receivers_account_hash on public.receivers (account_hash) where account_hash is not null;
+create index if not exists receivers_last4_idx on public.receivers (account_last4) where account_last4 is not null;
 
 -- 5) transactions
 create table if not exists public.transactions (
@@ -410,13 +425,16 @@ drop policy if exists "anon can read admins" on public.admins;
 drop policy if exists "anon can read bank_accounts" on public.bank_accounts;
 drop policy if exists "anon can read transactions" on public.transactions;
 drop policy if exists "anon can read rates" on public.rates;
+drop policy if exists "receivers anon read" on public.receivers;
 drop policy if exists "bot_metrics_open_access" on public.bot_metrics;
+drop policy if exists "bot_metrics_select" on public.bot_metrics;
 
-create policy "anon can read admins"        on public.admins        for select using (true);
-create policy "anon can read bank_accounts" on public.bank_accounts for select using (true);
-create policy "anon can read transactions"  on public.transactions  for select using (true);
-create policy "anon can read rates"         on public.rates         for select using (true);
-create policy "bot_metrics_open_access"     on public.bot_metrics     for all to public using (true) with check (true);
+create policy "anon can read admins"        on public.admins        for select to anon, authenticated using (true);
+create policy "anon can read bank_accounts" on public.bank_accounts for select to anon, authenticated using (true);
+create policy "anon can read transactions"  on public.transactions  for select to anon, authenticated using (true);
+create policy "anon can read rates"         on public.rates         for select to anon, authenticated using (true);
+create policy "receivers anon read"         on public.receivers     for select to anon, authenticated using (true);
+create policy "bot_metrics_select"          on public.bot_metrics    for select to anon, authenticated using (true);
 
 -- Permissions for service role functions
 revoke all on function public.claim_telegram_update(bigint) from public, anon, authenticated;

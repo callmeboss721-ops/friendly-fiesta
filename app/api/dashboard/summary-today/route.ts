@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     // Get account info
     const { data: account, error: accError } = await supabaseAdmin
       .from('bank_accounts')
-      .select('id, account_name, bank_name, account_last4')
+      .select('id, label, bank_name, account_number')
       .eq('id', accountId)
       .maybeSingle();
 
@@ -68,9 +68,9 @@ export async function GET(req: NextRequest) {
       data: {
         account: {
           id: account.id,
-          name: account.account_name,
+          name: account.label,
           bankName: account.bank_name,
-          last4: account.account_last4,
+          last4: String(account.account_number ?? '').replace(/\D/g, '').slice(-4) || '----',
         },
         daily,
         rates: {

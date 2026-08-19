@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     // Get pinned accounts for this chat/date
     const { data: pinnedRows, error: pinnedError } = await supabaseAdmin
       .from('pinned_bank_accounts')
-      .select('*, bank_accounts(account_name, bank_name, account_last4)')
+      .select('chat_id, bank_account_id, pinned_for_date, created_at, bank_accounts(label, bank_name, account_number)')
       .eq('chat_id', Number(chatId))
       .eq('pinned_for_date', date)
       .order('created_at', { ascending: false });
@@ -56,12 +56,13 @@ export async function GET(req: NextRequest) {
       if (accTx.length > 0 && totalThb > 0) status = 'active';
       else if (totalThb > 0) status = 'depleted';
 
+      const accountNumber = String(row.bank_accounts?.account_number ?? '');
       return {
-        id: row.id,
+        id: `${row.chat_id}:${row.bank_account_id}:${row.pinned_for_date}`,
         bankAccountId: row.bank_account_id,
-        accountName: row.bank_accounts?.account_name ?? 'Unknown',
+        accountName: row.bank_accounts?.label ?? 'Unknown',
         bankName: row.bank_accounts?.bank_name ?? 'Unknown',
-        last4: row.bank_accounts?.account_last4 ?? '0000',
+        last4: accountNumber.replace(/\D/g, '').slice(-4) || '0000',
         pinnedForDate: row.pinned_for_date,
         transactionCount: accTx.length,
         totalThb,
