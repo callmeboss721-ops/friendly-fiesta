@@ -3,14 +3,24 @@
 // ============================================================
 import { supabaseAdmin } from './supabaseAdmin';
 import { createHash, randomUUID } from 'crypto';
+import { getBotToken } from './runtimeEnv';
 
-const TOKEN = process.env.BOT_TOKEN || '';
-const API = `https://api.telegram.org/bot${TOKEN}`;
-const BUCKET = process.env.SUPABASE_BUCKET || 'slips';
+function botToken(): string {
+  const token = getBotToken();
+  if (!token) throw new Error('BOT_TOKEN_NOT_CONFIGURED');
+  return token;
+}
+
+function apiBase(): string {
+  return `https://api.telegram.org/bot${botToken()}`;
+}
+
+function bucketName(): string {
+  return process.env['SUPABASE_BUCKET'] || 'slips';
+}
 
 async function tg<T = any>(method: string, payload: Record<string, any>): Promise<T> {
-  if (!TOKEN) throw new Error('BOT_TOKEN_NOT_CONFIGURED');
-  const res = await fetch(`${API}/${method}`, {
+  const res = await fetch(`${apiBase()}/${method}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(payload),
@@ -51,8 +61,7 @@ export async function sendDocument(
     form.append('parse_mode', 'HTML');
   }
   form.append('document', new Blob(['﻿' + content], { type: 'text/csv' }), filename);
-  if (!TOKEN) throw new Error('BOT_TOKEN_NOT_CONFIGURED');
-  const response = await fetch(`${API}/sendDocument`, { method: 'POST', body: form });
+  const response = await fetch(`${apiBase()}/sendDocument`, { method: 'POST', body: form });
   const result = await response.json().catch(() => null);
   if (!response.ok || !result?.ok) throw new Error(`Telegram sendDocument: ${result?.description ?? `HTTP ${response.status}`}`);
 }
@@ -102,7 +111,7 @@ export async function sendSticker(chatId: number, fileId: string): Promise<void>
 /** ดาวน์โหลดรูปจาก Telegram แล้วอัปโหลดขึ้น Supabase Storage → คืน public URL */
 export async function uploadSlipFromTelegram(fileId: string): Promise<string> {
   const file = await tg<{ file_path: string }>('getFile', { file_id: fileId });
-  const fileRes = await fetch(`https://api.telegram.org/file/bot${TOKEN}/${file.file_path}`);
+  const fileRes = await fetch(`https://api.telegram.org/file/bot${botToken()}/${file.file_path}`);
   if (!fileRes.ok) throw new Error(`TELEGRAM_FILE_DOWNLOAD_FAILED: HTTP ${fileRes.status}`);
   const contentLength = Number(fileRes.headers.get('content-length') || 0);
   if (contentLength > 15 * 1024 * 1024) throw new Error('SLIP_FILE_TOO_LARGE');
@@ -111,11 +120,11 @@ export async function uploadSlipFromTelegram(fileId: string): Promise<string> {
 
   const fileKey = createHash('sha256').update(fileId).digest('hex').slice(0, 20);
   const path = `slips/${Date.now()}_${fileKey}_${randomUUID()}.jpg`;
-  const { error } = await supabaseAdmin.storage.from(BUCKET).upload(path, buffer, {
+  const { error } = await supabaseAdmin.storage.from(bucketName()).upload(path, buffer, {
     contentType: 'image/jpeg',
     upsert: true,
   });
   if (error) throw error;
 
-  return supabaseAdmin.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+  return supabaseAdmin.storage.from(bucketName()).getPublicUrl(path).data.publicUrl;
 }

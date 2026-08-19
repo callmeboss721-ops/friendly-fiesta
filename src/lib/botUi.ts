@@ -9,11 +9,12 @@
 //     {value}
 //   ไทยเป็นหลัก · English ในวงเล็บเฉพาะคำสำคัญ
 // ============================================================
+import { getAppUrl } from './runtimeEnv';
 import { randomBytes } from 'crypto';
 import type { OutgoingMessage } from './telegram';
 import { escapeTelegramHtml, telegramUserMention } from './botSecurity';
 
-const APP_RAW = (process.env.APP_URL || '').replace(/\/$/, '');
+const APP_RAW = (getAppUrl() || '').replace(/\/$/, '');
 const APP = APP_RAW.startsWith('https://') && !APP_RAW.includes('localhost') ? APP_RAW : '';
 const FEE_WARN = Number(process.env.FEE_WARNING_THRESHOLD || 3);
 

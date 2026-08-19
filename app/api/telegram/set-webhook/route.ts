@@ -3,7 +3,7 @@
 // เรียกครั้งเดียวหลัง deploy เพื่อบอก Telegram ให้ยิง update มาที่ webhook ของเรา
 // ============================================================
 import { NextRequest, NextResponse } from 'next/server';
-import { validateProductionEnvironment } from '@/lib/runtimeEnv';
+import { getAppUrl, getBotToken, getTelegramWebhookSecret, validateProductionEnvironment } from '@/lib/runtimeEnv';
 import { requireApiKey } from '@/lib/apiAuth';
 
 export const runtime = 'nodejs';
@@ -23,12 +23,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const secret = process.env.TELEGRAM_WEBHOOK_SECRET!;
+  const secret = getTelegramWebhookSecret();
+  if (!secret) return NextResponse.json({ error: 'TELEGRAM_WEBHOOK_SECRET ไม่ได้ตั้งค่า' }, { status: 500 });
 
-  const token = process.env.BOT_TOKEN;
+  const token = getBotToken();
   if (!token) return NextResponse.json({ error: 'BOT_TOKEN ไม่ได้ตั้งค่า' }, { status: 500 });
 
-  const base = (process.env.APP_URL || '').replace(/\/$/, '');
+  const base = (getAppUrl() || '').replace(/\/$/, '');
   if (!base.startsWith('https://')) {
     return NextResponse.json({ error: 'APP_URL ต้องเป็น HTTPS URL ที่เข้าถึงได้จาก Telegram' }, { status: 503 });
   }
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
       url: webhookUrl,
       secret_token: secret || undefined,
       allowed_updates: ['message', 'callback_query'],
-      drop_pending_updates: false,
+      drop_pending_updates: true,
     }),
   });
   const result = await res.json().catch(() => null);

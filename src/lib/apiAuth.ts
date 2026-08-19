@@ -6,7 +6,7 @@
 // ============================================================
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { isPlaceholderValue } from './runtimeEnv';
+import { getApiSecret, isPlaceholderValue } from './runtimeEnv';
 
 function safeEqual(a: string, b: string): boolean {
   const ba = Buffer.from(a);
@@ -19,7 +19,7 @@ function safeEqual(a: string, b: string): boolean {
  * คืน NextResponse 401 ถ้าไม่ผ่าน, หรือ null ถ้าผ่าน (ให้ทำงานต่อ)
  */
 export function requireApiKey(req: NextRequest): NextResponse | null {
-  const secret = process.env.API_SECRET;
+  const secret = getApiSecret();
   if (!secret || isPlaceholderValue(secret) || secret.length < 32) {
     if (process.env.NODE_ENV !== 'production' && process.env.ALLOW_INSECURE_DEV_API === '1') return null;
     return NextResponse.json({ error: 'API security is not configured' }, { status: 503 });

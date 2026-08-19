@@ -17,6 +17,10 @@ const UI = require('../src/lib/botUi');
 const {
   getOcrAutoMin,
   getSupabaseAdminKey,
+  getApiSecret,
+  getBotToken,
+  getTelegramWebhookSecret,
+  getAppUrl,
   validateProductionEnvironment,
 } = require('../src/lib/runtimeEnv');
 
@@ -125,6 +129,22 @@ assert(
     .some((issue: { key: string }) => issue.key === 'BOT_TOKEN'),
   'rejects placeholder secrets in production',
 );
+
+const netlifyLikeEnv = {
+  NEXT_PUBLIC_SUPABASE_URL: validProductionEnv.NEXT_PUBLIC_SUPABASE_URL,
+  SUPABASE_SECRET_KEY: validProductionEnv.SUPABASE_SECRET_KEY,
+  BOT_TOKEN: validProductionEnv.BOT_TOKEN,
+  ADMIN_TELEGRAM_IDS: validProductionEnv.ADMIN_TELEGRAM_IDS,
+  URL: 'https://glittering-bienenstitch-f601e2.netlify.app',
+  GROK_API_KEY: validProductionEnv.GROK_API_KEY,
+};
+assert(getBotToken(validProductionEnv) === validProductionEnv.BOT_TOKEN, 'reads a valid BOT_TOKEN at runtime');
+assert(getBotToken({ BOT_TOKEN: 'your-telegram-bot-token' }) === null, 'rejects placeholder BOT_TOKEN at runtime');
+assert(getBotToken({ BOT_TOKEN: 'not-a-token' }) === null, 'rejects malformed BOT_TOKEN at runtime');
+assert(getAppUrl(netlifyLikeEnv) === 'https://glittering-bienenstitch-f601e2.netlify.app', 'APP_URL falls back to Netlify URL');
+assert(typeof getApiSecret(netlifyLikeEnv) === 'string' && (getApiSecret(netlifyLikeEnv) as string).length === 64, 'derives API_SECRET from BOT_TOKEN');
+assert(getApiSecret(netlifyLikeEnv) !== getTelegramWebhookSecret(netlifyLikeEnv), 'derived API and webhook secrets differ');
+assert(validateProductionEnvironment(netlifyLikeEnv).length === 0, 'accepts Netlify production env without APP_URL/API_SECRET/rates');
 
 assert(pickExplicitThbAmount('ยอดโอน 5,000.00 บาท') === 5000, 'OCR fallback accepts explicitly labelled THB');
 assert(pickExplicitThbAmount('เลขอ้างอิง 999999 ยอดคงเหลือ 5000') === null, 'OCR fallback does not guess from unrelated numbers');

@@ -4,21 +4,25 @@
 // ใช้ bot token เดียวกับ CE Vault (คนละ chat)
 // ============================================================
 import { supabaseAdmin } from './supabaseAdmin';
+import { getBotToken } from './runtimeEnv';
 
-const TOKEN = process.env.BOT_TOKEN || '';
-const CHAT_ID = process.env.NOTIFY_CHAT_ID || ''; // เว้นว่าง = ปิดแจ้งเตือน
+function notifyChatId(): string {
+  return process.env['NOTIFY_CHAT_ID']?.trim() || '';
+}
 
 const nf = new Intl.NumberFormat('th-TH', { maximumFractionDigits: 2 });
 const money = (n: number) => nf.format(Number(n) || 0);
 
 async function post(text: string): Promise<void> {
-  if (!TOKEN || !CHAT_ID) return; // ปิดใช้งานเงียบๆ ถ้ายังไม่ตั้ง env
+  const token = getBotToken();
+  const chatId = notifyChatId();
+  if (!token || !chatId) return; // ปิดใช้งานเงียบๆ ถ้ายังไม่ตั้ง env
   try {
-    const res = await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        chat_id: CHAT_ID,
+        chat_id: chatId,
         text,
         parse_mode: 'HTML',
         disable_web_page_preview: true,

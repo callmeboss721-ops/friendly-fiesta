@@ -1,3 +1,5 @@
+import { createHash } from 'crypto';
+
 type EnvMap = Record<string, string | undefined>;
 
 export interface ConfigIssue {
@@ -37,8 +39,56 @@ export function getSupabaseAdminKey(env: EnvMap = process.env): string | null {
   return envValue(env, 'SUPABASE_SECRET_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SERVICE_KEY');
 }
 
+function derivedSecret(env: EnvMap, purpose: string): string | null {
+  const seed = envValue(env, 'BOT_TOKEN', 'SUPABASE_SECRET_KEY', 'SUPABASE_SERVICE_ROLE_KEY');
+  if (!seed || isPlaceholderValue(seed)) return null;
+  return createHash('sha256').update(`ce-vault:${purpose}:${seed}`).digest('hex');
+}
+
+export function getApiSecret(env: EnvMap = process.env): string | null {
+  const explicit = envValue(env, 'API_SECRET');
+  if (explicit && !isPlaceholderValue(explicit)) return explicit;
+  return derivedSecret(env, 'api-secret');
+}
+
+export function getBotToken(env: EnvMap = process.env): string | null {
+  const token = envValue(env, 'BOT_TOKEN');
+  if (!token || isPlaceholderValue(token)) return null;
+  if (!/^\d{5,}:[A-Za-z0-9_-]{20,}$/.test(token)) return null;
+  return token;
+}
+
 export function getTelegramWebhookSecret(env: EnvMap = process.env): string | null {
-  return envValue(env, 'TELEGRAM_WEBHOOK_SECRET');
+  const explicit = envValue(env, 'TELEGRAM_WEBHOOK_SECRET');
+  if (explicit && !isPlaceholderValue(explicit)) return explicit;
+  return derivedSecret(env, 'telegram-webhook');
+}
+
+export function getAppUrl(env: EnvMap = process.env): string | null {
+  const raw = envValue(env, 'APP_URL', 'URL', 'DEPLOY_PRIME_URL', 'RENDER_EXTERNAL_URL');
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    if (url.protocol === 'http:') url.protocol = 'https:';
+    url.hash = '';
+    url.search = '';
+    const href = url.toString().replace(/\/$/, '');
+    return href;
+  } catch {
+    return raw.replace(/\/$/, '');
+  }
+}
+
+export function getDefaultSellRate(env: EnvMap = process.env): string {
+  const value = envValue(env, 'DEFAULT_SELL_RATE');
+  if (value && Number.isFinite(Number(value)) && Number(value) > 0) return value;
+  return '35.5';
+}
+
+export function getDefaultMarketRate(env: EnvMap = process.env): string {
+  const value = envValue(env, 'DEFAULT_MARKET_RATE');
+  if (value && Number.isFinite(Number(value)) && Number(value) > 0) return value;
+  return '34.8';
 }
 
 export function getOcrAutoMin(env: EnvMap = process.env): number {
@@ -95,10 +145,12 @@ export function validateWebhookEnvironment(env: EnvMap = process.env): ConfigIss
     'SUPABASE_SERVICE_ROLE_KEY',
     'SUPABASE_SERVICE_KEY',
   ]);
-  const apiSecret = requireValue(issues, env, 'API_SECRET');
+  const apiSecret = getApiSecret(env);
   const botToken = requireValue(issues, env, 'BOT_TOKEN');
-  const webhookSecret = requireValue(issues, env, 'TELEGRAM_WEBHOOK_SECRET');
+  const webhookSecret = getTelegramWebhookSecret(env);
   requireValue(issues, env, 'ADMIN_TELEGRAM_IDS');
+  if (!apiSecret) issues.push({ key: 'API_SECRET', code: 'missing' });
+  if (!webhookSecret) issues.push({ key: 'TELEGRAM_WEBHOOK_SECRET', code: 'missing' });
 
   if (supabaseUrl && !isHttpsUrl(supabaseUrl)) {
     issues.push({ key: 'NEXT_PUBLIC_SUPABASE_URL', code: 'invalid' });
@@ -132,15 +184,18 @@ export function validateWebhookEnvironment(env: EnvMap = process.env): ConfigIss
 
 export function validateProductionEnvironment(env: EnvMap = process.env): ConfigIssue[] {
   const issues = validateWebhookEnvironment(env);
-  const appUrl = requireValue(issues, env, 'APP_URL');
-
-  if (appUrl && !isHttpsUrl(appUrl, false)) {
+  const appUrl = getAppUrl(env);
+  if (!appUrl) {
+    issues.push({ key: 'APP_URL', code: 'missing' });
+  } else if (!isHttpsUrl(appUrl, false)) {
     issues.push({ key: 'APP_URL', code: 'invalid' });
   }
 
-  for (const key of ['DEFAULT_SELL_RATE', 'DEFAULT_MARKET_RATE'] as const) {
-    const value = requireValue(issues, env, key);
-    if (value && (!Number.isFinite(Number(value)) || Number(value) <= 0)) {
+  for (const [key, value] of [
+    ['DEFAULT_SELL_RATE', getDefaultSellRate(env)],
+    ['DEFAULT_MARKET_RATE', getDefaultMarketRate(env)],
+  ] as const) {
+    if (!Number.isFinite(Number(value)) || Number(value) <= 0) {
       issues.push({ key, code: 'invalid' });
     }
   }

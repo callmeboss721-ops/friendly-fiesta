@@ -1,9 +1,13 @@
 [build]
   command = "npm run build"
-  publish = ".next"
+  # Next.js Runtime plugin owns the publish directory; do not set publish = ".next"
 
 [build.environment]
   NODE_VERSION = "20"
+  DEFAULT_SELL_RATE = "35.5"
+  DEFAULT_MARKET_RATE = "34.8"
+  OCR_AUTO_MIN = "90"
+  APP_URL = "https://live--ce-vault-20260819.netlify.app"
 
 [dev]
   command = "npm run dev"
