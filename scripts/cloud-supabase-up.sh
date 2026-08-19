@@ -39,9 +39,13 @@ mint_keys() {
 
 write_env_local() {
   local anon="$1" sr="$2"
-  # Preserve an existing production .env.local (only manage the local-dev one).
-  if [ -f .env.local ] && ! grep -q "127.0.0.1:54321" .env.local && grep -q "supabase.co" .env.local; then
-    log ".env.local points at a remote Supabase — leaving it untouched"
+  # Preserve a REAL remote .env.local, but overwrite placeholders and local configs.
+  # A real remote has a supabase.co URL that is not localhost and not a template placeholder.
+  if [ -f .env.local ] \
+    && grep -qE 'NEXT_PUBLIC_SUPABASE_URL=https://[a-z0-9]+\.supabase\.co' .env.local \
+    && ! grep -q "127.0.0.1:54321" .env.local \
+    && ! grep -qiE 'xxxx|placeholder|your-|replace-' .env.local; then
+    log ".env.local points at a real remote Supabase — leaving it untouched"
     return
   fi
   cat > .env.local <<EOF
