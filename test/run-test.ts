@@ -269,7 +269,17 @@ assert(matchPinnedBank('SCB', '7890', pinnedBanks) === null, 'mismatch: correct 
 assert(matchPinnedBank('KBANK', '0000', pinnedBanks) === null, 'mismatch: correct bank but wrong last4 is rejected (no false positive)');
 assert(matchPinnedBank(null, '7890', pinnedBanks) === null, 'match requires both bank and last4 (missing bank -> null)');
 assert(matchPinnedBank('KBANK', null, pinnedBanks) === null, 'match requires both bank and last4 (missing last4 -> null)');
+assert(matchPinnedBank('KBANK', '7890', []) === null, 'no pinned account for the day -> match returns null (blocks auto-save)');
 assert(accountLast4('1234567890') === '7890' && accountLast4('12') === null, 'accountLast4 extracts trailing 4 digits and guards short input');
+
+// ============================================================
+// OCR confidence gating (never silently trust low/unknown confidence)
+// ============================================================
+assert(isLowConfidence(95, 90) === false, 'OCR confidence 95 >= 90 is trusted');
+assert(isLowConfidence(89.9, 90) === true, 'OCR confidence 89.9 < 90 is flagged low');
+assert(isLowConfidence(null) === true, 'OCR with null confidence is treated as low (never silently trusted)');
+assert(isLowConfidence(undefined) === true, 'OCR with undefined confidence is treated as low');
+assert(isLowConfidence(NaN) === true, 'OCR with NaN confidence is treated as low');
 
 // ============================================================
 // Ledger reference: format #CE-YYYYMMDD-XXXX + uniqueness (collision resistance)
