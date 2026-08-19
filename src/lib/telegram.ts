@@ -4,6 +4,10 @@
 import { supabaseAdmin } from './supabaseAdmin';
 import { createHash, randomUUID } from 'crypto';
 import { getBotToken } from './runtimeEnv';
+import { agentLog } from './debugAgentLog';
+import { isHtmlParseError, isUnreachableChatError, telegramErrorMessage } from './telegramErrors';
+
+export { isHtmlParseError, isUnreachableChatError } from './telegramErrors';
 
 function botToken(): string {
   const token = getBotToken();
@@ -35,11 +39,6 @@ export interface OutgoingMessage {
   reply_markup?: unknown;
 }
 
-function isHtmlParseError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error ?? '');
-  return /can't parse entities|can't parse|parse entities|Bad Request: .*parse/i.test(message);
-}
-
 export function stripTelegramHtml(text: string): string {
   return String(text ?? '')
     .replace(/<br\s*\/?>/gi, '\n')
@@ -64,14 +63,33 @@ export async function sendMessage(chatId: number, m: OutgoingMessage): Promise<n
     });
     return r.message_id;
   } catch (error) {
+    const msg = telegramErrorMessage(error);
+    const unreachable = isUnreachableChatError(error);
+    // #region agent log
+    try {
+      agentLog('C', 'telegram.ts:sendMessage', unreachable ? 'unreachable_chat_swallowed' : 'send_message_failed', {
+        chatId,
+        isHtmlParse: isHtmlParseError(error),
+        unreachable,
+        errorMessage: msg.slice(0, 300),
+        textLen: m.text?.length ?? 0,
+      });
+    } catch { /* debug log must never break send */ }
+    // #endregion
+    if (unreachable) return 0;
     if (!isHtmlParseError(error)) throw error;
-    const r = await tg<{ message_id: number }>('sendMessage', {
-      chat_id: chatId,
-      text: stripTelegramHtml(m.text).slice(0, 4096),
-      disable_web_page_preview: true,
-      reply_markup: m.reply_markup,
-    });
-    return r.message_id;
+    try {
+      const r = await tg<{ message_id: number }>('sendMessage', {
+        chat_id: chatId,
+        text: stripTelegramHtml(m.text).slice(0, 4096),
+        disable_web_page_preview: true,
+        reply_markup: m.reply_markup,
+      });
+      return r.message_id;
+    } catch (retryError) {
+      if (isUnreachableChatError(retryError)) return 0;
+      throw retryError;
+    }
   }
 }
 
@@ -91,7 +109,11 @@ export async function sendDocument(
   form.append('document', new Blob(['﻿' + content], { type: 'text/csv' }), filename);
   const response = await fetch(`${apiBase()}/sendDocument`, { method: 'POST', body: form });
   const result = await response.json().catch(() => null);
-  if (!response.ok || !result?.ok) throw new Error(`Telegram sendDocument: ${result?.description ?? `HTTP ${response.status}`}`);
+  if (!response.ok || !result?.ok) {
+    const err = new Error(`Telegram sendDocument: ${result?.description ?? `HTTP ${response.status}`}`);
+    if (isUnreachableChatError(err)) return;
+    throw err;
+  }
 }
 
 /** แก้ไขข้อความในที่เดิม (เอฟเฟกต์ progress) */

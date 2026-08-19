@@ -512,6 +512,17 @@ assert(rendered.text.includes('รายการล่าสุด') && rendere
 assert(isDownloadFailure(new Error('TELEGRAM_FILE_DOWNLOAD_FAILED: HTTP 404')) === true, 'photo download failures are classified as download_failed');
 assert(isDownloadFailure(new Error('random')) === false, 'non-download errors are not classified as download_failed');
 
+const { isUnreachableChatError, isHtmlParseError } = require('../src/lib/telegramErrors');
+assert(isUnreachableChatError(new Error('Telegram sendMessage: Bad Request: chat not found')) === true, 'chat not found is unreachable');
+assert(isUnreachableChatError(new Error('Telegram sendMessage: Forbidden: bot was blocked by the user')) === true, 'blocked user is unreachable');
+assert(isUnreachableChatError(new Error('Telegram sendMessage: Forbidden: bot was kicked from the group chat')) === true, 'kicked bot is unreachable');
+assert(isUnreachableChatError(new Error('Telegram sendMessage: Forbidden: bot is not a member of the supergroup chat')) === true, 'non-member bot is unreachable');
+assert(isUnreachableChatError(new Error('Telegram sendMessage: Bad Request: PEER_ID_INVALID')) === true, 'invalid peer is unreachable');
+assert(isUnreachableChatError(new Error('Telegram sendMessage: Forbidden: user is deactivated')) === true, 'deactivated user is unreachable');
+assert(isUnreachableChatError(new Error('Telegram sendMessage: HTTP 500')) === false, 'Telegram 500 is not treated as unreachable');
+assert(isUnreachableChatError(new Error('WEBHOOK_TIMEOUT')) === false, 'webhook timeout is not treated as unreachable');
+assert(isHtmlParseError(new Error("Telegram sendMessage: Bad Request: can't parse entities")) === true, 'HTML parse errors stay classified separately');
+
 assert(messageCommandText({ caption: '/save_slip +500B' }) === '/save_slip +500B', 'caption /save_slip is treated as a command');
 assert(commandName(messageCommandText({ caption: '/save_slip@Razen_7xbot +500B' })) === 'save_slip', 'caption commands honour bot mention suffix');
 assert(messageCommandText({ text: '/pin KBANK 1234' }) === '/pin KBANK 1234', 'plain text commands still win over empty caption');
