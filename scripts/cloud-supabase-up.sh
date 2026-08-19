@@ -75,7 +75,8 @@ ensure_docker() {
   sudo sysctl -w net.ipv4.ip_forward=1 >/dev/null 2>&1 || true
   sudo sysctl -w net.bridge.bridge-nf-call-iptables=0 >/dev/null 2>&1 || true
   sudo iptables-legacy -P FORWARD ACCEPT 2>/dev/null || true
-  sudo nohup dockerd >/tmp/dockerd.log 2>&1 &
+  # Close the bootstrap flock fd so dockerd cannot hold the lock after we exit.
+  sudo nohup dockerd >/tmp/dockerd.log 2>&1 9>&- &
   for _ in $(seq 1 30); do docker info >/dev/null 2>&1 && break; sleep 2; done
 }
 

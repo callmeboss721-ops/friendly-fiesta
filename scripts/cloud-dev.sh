@@ -24,9 +24,13 @@ if [ -f "$START_SCRIPT" ] && [ ! -f "$START_STATUS" ]; then
   done
 fi
 
-# Bring up (or reuse) the local Supabase stack; never fatal for the dev server.
-# Serialized with `start` via flock inside cloud-supabase-up.sh.
-bash scripts/cloud-supabase-up.sh || true
+# If `start` already brought the stack up, skip a second bootstrap (avoids
+# waiting on the flock while dockerd or a slow start still holds it).
+if docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^supabase_db_workspace$'; then
+  echo "[cloud-dev] supabase already running, skipping bootstrap"
+else
+  bash scripts/cloud-supabase-up.sh || true
+fi
 
 # Load local dev env with override (guarantees the app targets local Supabase).
 if [ -f .env.local ]; then
