@@ -11,7 +11,7 @@
 // ============================================================
 import { randomBytes } from 'crypto';
 import type { OutgoingMessage } from './telegram';
-import { escapeTelegramHtml } from './botSecurity';
+import { escapeTelegramHtml, telegramUserMention } from './botSecurity';
 
 const APP_RAW = (process.env.APP_URL || '').replace(/\/$/, '');
 const APP = APP_RAW.startsWith('https://') && !APP_RAW.includes('localhost') ? APP_RAW : '';
@@ -308,6 +308,84 @@ export function recentListTemplate(pairs: any[], adminMentions?: string): Outgoi
   if (adminMentions) {
     parts.push(SEP);
     parts.push(`👤 <b>ผู้ดูแล</b> <i>(Operator)</i>\n${adminMentions}`);
+  }
+  return { text: parts.join('\n') };
+}
+
+// Telegram hard limit per message
+const TELEGRAM_MAX_LEN = 4096;
+
+export interface RecentSlipView {
+  ledgerRef?: string | null;
+  type?: string | null;
+  time?: string | null;
+  thb?: number | null;
+  usdt?: number | null;
+  sellRate?: number | null;
+  adminName?: string | null;
+  adminTelegramId?: number | null;
+  receiverName?: string | null;
+  receiverBank?: string | null;
+  receiverLast4?: string | null;
+}
+
+/**
+ * รายการสลิปล่าสุด (/recent_slips) — แสดง ledger ref, THB, USDT, เรท, เวลา, ผู้ดูแล,
+ * และผู้รับเมื่อมีข้อมูล · escape ทุกค่าที่มาจากฐานข้อมูล · ไม่เกิน Telegram limit
+ */
+export function recentSlipsList(slips: RecentSlipView[]): OutgoingMessage {
+  if (!slips || slips.length === 0) {
+    return card({
+      icon: '🧾',
+      titleTh: 'สลิปล่าสุด',
+      titleEn: 'Recent Slips',
+      note: 'ยังไม่มีรายการ — ส่งสลิปหรือใช้ /save_slip เพื่อบันทึกรายการแรก',
+    });
+  }
+
+  const header = ['🧾 <b>สลิปล่าสุด</b>', '<i>(Recent Slips)</i>'];
+  const renderRow = (s: RecentSlipView, i: number): string => {
+    const isOut = String(s.type) === 'USDT_SEND';
+    const dirTh = isOut ? 'ส่งออก' : 'รับเข้า';
+    const dirEn = isOut ? 'OUT' : 'IN';
+    const dirIcon = isOut ? '🔻' : '🟢';
+    const admin = s.adminTelegramId
+      ? telegramUserMention(s.adminTelegramId, s.adminName || 'Admin')
+      : mono(s.adminName || '—');
+    const lines: string[] = [];
+    lines.push(`${i + 1}. ${dirIcon} ${mono(s.ledgerRef || '—')} · <i>${dirTh} (${dirEn})</i>`);
+    const money2 = `💵 ${amount(s.thb ?? 0, 'THB')} → 🚀 ${amount(s.usdt ?? 0, 'USDT')}`;
+    const rate = s.sellRate != null && s.sellRate > 0 ? ` · 📈 ${mono(money(s.sellRate))}` : '';
+    lines.push(`   ${money2}${rate}`);
+    let meta = `   ⏱ ${mono(s.time || '—')} · 👤 ${admin}`;
+    if (s.receiverName || s.receiverLast4) {
+      const recvName = s.receiverName ? escapeHtml(s.receiverName) : '';
+      const recvAcct = [s.receiverBank ? escapeHtml(s.receiverBank) : null, s.receiverLast4 ? `••${escapeHtml(s.receiverLast4)}` : null]
+        .filter(Boolean)
+        .join(' ');
+      const recv = [recvName, recvAcct ? `(${recvAcct})` : ''].filter(Boolean).join(' ');
+      if (recv) meta += ` · 👥 ${recv}`;
+    }
+    lines.push(meta);
+    return lines.join('\n');
+  };
+
+  // ไม่ให้ยาวเกิน Telegram limit — ตัดแล้วแจ้ง pagination
+  const rows: string[] = [];
+  let shown = 0;
+  let length = header.join('\n').length + SEP.length + 2;
+  for (let i = 0; i < slips.length; i++) {
+    const row = renderRow(slips[i], i);
+    if (length + row.length + 2 > TELEGRAM_MAX_LEN - 120) break;
+    rows.push(row);
+    length += row.length + 2;
+    shown += 1;
+  }
+
+  const parts: string[] = [...header, SEP, rows.join('\n\n')];
+  if (shown < slips.length) {
+    parts.push(SEP);
+    parts.push(`<i>แสดง ${shown} จาก ${slips.length} รายการ — ระบุจำนวนที่น้อยลง เช่น /recent_slips ${Math.max(1, shown)}</i>`);
   }
   return { text: parts.join('\n') };
 }

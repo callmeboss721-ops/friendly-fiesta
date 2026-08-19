@@ -23,6 +23,7 @@ import {
   recordIncoming,
   recordOutgoing,
   getRecentPairs,
+  getRecentSlips,
   getTodayBankAccountTotals,
   DuplicateSlipError,
 } from '@/lib/transactions';
@@ -37,14 +38,12 @@ import { findReceiversByLast4, upsertReceiverOnDeposit } from '@/lib/receivers';
 import { getSticker, validateStickers, type StickerState } from '@/config/stickers';
 import {
   commandName,
-  escapeTelegramHtml,
   isBootstrapAdmin,
   isLowConfidence,
   requiresAdminAccess,
   parseRecentLimit,
   parseSaveSlipArgs,
   slipFingerprint,
-  telegramUserMention,
 } from '@/lib/botSecurity';
 import {
   getOcrAutoMin,
@@ -207,8 +206,8 @@ async function handleUpdate(update: any): Promise<void> {
     if (intent === 'today' || intent === 'profit') { await sendLedger(chatId); return; }
     if (intent === 'recent') {
       try {
-        const pairs = await getRecentPairs(chatId, undefined, 5);
-        await sendMessage(chatId, UI.recentListTemplate(pairs));
+        const slips = await getRecentSlips(chatId, 5);
+        await sendMessage(chatId, UI.recentSlipsList(slips));
       } catch (e: any) {
         await sendMessage(chatId, UI.error(e?.message ?? 'ไม่สามารถดึงรายการล่าสุดได้'));
       }
@@ -438,22 +437,8 @@ async function handleUpdate(update: any): Promise<void> {
       return;
     }
     try {
-      const pairs = await getRecentPairs(chatId, undefined, limit);
-      // Fetch admin list for mentions (best-effort)
-      let adminMentions = '';
-      try {
-        const { data: admins } = await supabaseAdmin.from('admins').select('name, telegram_user_id');
-        if (Array.isArray(admins) && admins.length > 0) {
-          adminMentions = admins
-            .slice(0, 10)
-            .map((a: any) => (a.telegram_user_id ? telegramUserMention(Number(a.telegram_user_id), String(a.name || 'Admin')) : escapeTelegramHtml(a.name)))
-            .join(' ');
-        }
-      } catch (e) {
-        // ignore
-      }
-
-      await sendMessage(chatId, UI.recentListTemplate(pairs, adminMentions));
+      const slips = await getRecentSlips(chatId, limit);
+      await sendMessage(chatId, UI.recentSlipsList(slips));
     } catch (e: any) {
       await sendMessage(chatId, UI.error(e?.message ?? 'ไม่สามารถดึงรายการล่าสุดได้'));
     }
@@ -779,6 +764,15 @@ async function handleUpdate(update: any): Promise<void> {
           ? 'หลักฐานนี้ถูกบันทึกแล้ว — ใช้ /recent_slips เพื่อตรวจ Ledger Reference' : e?.message ??'บันทึกไม่สำเร็จ — ตรวจยอดแล้วลองใหม่';
         await sendMessage(chatId, UI.error(detail));
       }
+      return;
+    }
+    // ทิศทางผิด: THB ต้องเป็นเงินเข้า (+), USDT ต้องเป็นเหรียญออก (-) — ห้ามบันทึกเงียบ
+    if (amt.thb && amt.thb.sign < 0) {
+      await sendMessage(chatId, UI.wrongDirection('THB'));
+      return;
+    }
+    if (amt.usdt && amt.usdt.sign > 0) {
+      await sendMessage(chatId, UI.wrongDirection('USDT'));
       return;
     }
     if (amt.hasBareNumber) {
@@ -1196,8 +1190,8 @@ async function handleCallback(cb: any): Promise<void> {
     if (arg === 'receiver') {
       await answerCallback(id, '👤 ผู้รับ');
       try {
-        const pairs = await getRecentPairs(chatId, undefined, 5);
-        const view = UI.recentListTemplate(pairs);
+        const slips = await getRecentSlips(chatId, 5);
+        const view = UI.recentSlipsList(slips);
         if (msgId) await editMessage(chatId, msgId, view);
         else await sendMessage(chatId, view);
       } catch (e: any) {

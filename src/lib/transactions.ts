@@ -667,6 +667,80 @@ export async function getRecentPairs(
   return pairs.slice(-limit).reverse(); // ล่าสุดอยู่บน
 }
 
+/**
+ * รายการสลิปล่าสุดแบบละเอียด (สำหรับ /recent_slips) — ดึงจาก Supabase จริง
+ * เรียงล่าสุดก่อน จำกัดตาม limit และคืนฟิลด์ครบ: ledger ref, THB, USDT, rate,
+ * เวลา, admin (+ telegram id สำหรับ mention), และผู้รับเมื่อมีข้อมูล
+ */
+export interface RecentSlip {
+  ledgerRef: string | null;
+  type: string;
+  createdAt: string;
+  time: string;
+  date: string;
+  thb: number;
+  usdt: number;
+  sellRate: number | null;
+  adminName: string | null;
+  adminTelegramId: number | null;
+  receiverName: string | null;
+  receiverBank: string | null;
+  receiverLast4: string | null;
+}
+
+const BANGKOK_TZ = 'Asia/Bangkok';
+
+function fmtBangkokTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('th-TH', {
+    hour: '2-digit', minute: '2-digit', hour12: false, timeZone: BANGKOK_TZ,
+  });
+}
+
+function fmtBangkokDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('th-TH', {
+    day: 'numeric', month: 'short', year: 'numeric', timeZone: BANGKOK_TZ,
+  });
+}
+
+export async function getRecentSlips(
+  chatId: number,
+  limit = 5,
+  sinceIso?: string | null,
+): Promise<RecentSlip[]> {
+  const safeLimit = Number.isSafeInteger(limit) && limit >= 1 && limit <= 20 ? limit : 5;
+  let query = supabaseAdmin
+    .from('transactions')
+    .select(
+      'ledger_ref, type, created_at, thb_amount, usdt_amount, sell_rate, receiver_name, receiver_bank, receiver_last4, admins(name, telegram_user_id)',
+    )
+    .eq('chat_id', chatId)
+    .order('created_at', { ascending: false })
+    .limit(safeLimit);
+  if (sinceIso) query = query.gte('created_at', sinceIso);
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return ((data ?? []) as any[]).map((row) => {
+    const admin = Array.isArray(row.admins) ? row.admins[0] : row.admins;
+    const telegramId = Number(admin?.telegram_user_id);
+    return {
+      ledgerRef: row.ledger_ref ?? null,
+      type: String(row.type ?? ''),
+      createdAt: row.created_at,
+      time: fmtBangkokTime(row.created_at),
+      date: fmtBangkokDate(row.created_at),
+      thb: Number(row.thb_amount) || 0,
+      usdt: Number(row.usdt_amount) || 0,
+      sellRate: row.sell_rate == null ? null : Number(row.sell_rate),
+      adminName: admin?.name ?? null,
+      adminTelegramId: Number.isSafeInteger(telegramId) && telegramId > 0 ? telegramId : null,
+      receiverName: row.receiver_name ?? null,
+      receiverBank: row.receiver_bank ?? null,
+      receiverLast4: row.receiver_last4 ?? null,
+    };
+  });
+}
+
 /** สร้าง CSV ธุรกรรมของห้อง (สำหรับ /export → ส่งเป็นไฟล์ในแชต) */
 export async function exportRoomCsv(chatId: number, sinceIso?: string | null): Promise<{ csv: string; rows: number }> {
   let q = supabaseAdmin
