@@ -1,6 +1,7 @@
 {
   "name": "CE Vault — USDT Arbitrage Dashboard",
   "install": "npm ci && { [ -f .env.local ] || cp .env.local.example .env.local; }",
+  "start": "bash scripts/cloud-supabase-up.sh",
   "terminals": [
     {
       "name": "next-dev",
@@ -12,6 +13,10 @@
     {
       "name": "web",
       "port": 3000
+    },
+    {
+      "name": "supabase-api",
+      "port": 54321
     }
   ]
 }
