@@ -4,8 +4,7 @@
 import { supabaseAdmin } from './supabaseAdmin';
 import { createHash, randomUUID } from 'crypto';
 import { getBotToken } from './runtimeEnv';
-import { agentLog } from './debugAgentLog';
-import { isHtmlParseError, isUnreachableChatError, telegramErrorMessage } from './telegramErrors';
+import { isHtmlParseError, isUnreachableChatError } from './telegramErrors';
 
 export { isHtmlParseError, isUnreachableChatError } from './telegramErrors';
 
@@ -63,20 +62,7 @@ export async function sendMessage(chatId: number, m: OutgoingMessage): Promise<n
     });
     return r.message_id;
   } catch (error) {
-    const msg = telegramErrorMessage(error);
-    const unreachable = isUnreachableChatError(error);
-    // #region agent log
-    try {
-      agentLog('C', 'telegram.ts:sendMessage', unreachable ? 'unreachable_chat_swallowed' : 'send_message_failed', {
-        chatId,
-        isHtmlParse: isHtmlParseError(error),
-        unreachable,
-        errorMessage: msg.slice(0, 300),
-        textLen: m.text?.length ?? 0,
-      });
-    } catch { /* debug log must never break send */ }
-    // #endregion
-    if (unreachable) return 0;
+    if (isUnreachableChatError(error)) return 0;
     if (!isHtmlParseError(error)) throw error;
     try {
       const r = await tg<{ message_id: number }>('sendMessage', {

@@ -170,15 +170,6 @@ export async function POST(req: NextRequest) {
   } catch (e: any) {
     log(`⚠️ webhook error: ${e?.message || e}`, e?.stack?.slice(0, 200));
     if (isUnreachableChatError(e)) {
-      // #region agent log
-      try {
-        agentLog('C', 'webhook/route.ts:POST-catch', 'unreachable_chat_acked', {
-          claimedUpdateId,
-          failureChatId,
-          errorMessage: String(e?.message || e).slice(0, 300),
-        });
-      } catch { /* noop */ }
-      // #endregion
       // Keep the claim so Telegram does not retry a chat that cannot receive messages.
       return NextResponse.json({ ok: true, skipped: 'unreachable_chat' });
     }
