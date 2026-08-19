@@ -1,12 +1,13 @@
 {
   "name": "CE Vault — USDT Arbitrage Dashboard",
-  "install": "npm ci && { [ -f .env.local ] || cp .env.local.example .env.local; }",
+  "snapshot": "snapshot-20260819-aa2195b8-cbf4-4f13-8476-cee6838f72ad",
+  "install": "npm ci",
   "start": "bash scripts/cloud-supabase-up.sh",
   "terminals": [
     {
       "name": "next-dev",
-      "command": "npm run dev",
-      "description": "Next.js dev server (dashboard + API + Telegram webhook) on http://localhost:3000"
+      "command": "bash scripts/cloud-dev.sh",
+      "description": "Local Supabase bootstrap + Next.js dev server (dashboard + API + Telegram webhook) on http://localhost:3000"
     }
   ],
   "ports": [
