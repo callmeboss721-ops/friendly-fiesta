@@ -11,14 +11,23 @@ export interface FeeResult {
   feePercent: number;   // % ค่าธรรมเนียม
 }
 
+const safe = (value: number): number => (Number.isFinite(value) ? value : 0);
+
 export function calculateFee(
   thbAmount: number,
   marketUsdtRate: number,
   actualUsdt: number,
 ): FeeResult {
-  const expectedUsdt = marketUsdtRate > 0 ? thbAmount / marketUsdtRate : 0;
-  const feeUsdt = expectedUsdt - actualUsdt;
+  const thb = safe(thbAmount);
+  const rate = safe(marketUsdtRate);
+  const actual = safe(actualUsdt);
+  const expectedUsdt = rate > 0 ? thb / rate : 0;
+  const feeUsdt = expectedUsdt - actual;
   const feePercent = expectedUsdt > 0 ? (feeUsdt / expectedUsdt) * 100 : 0;
 
-  return { expectedUsdt, feeUsdt, feePercent };
+  return {
+    expectedUsdt: safe(expectedUsdt),
+    feeUsdt: safe(feeUsdt),
+    feePercent: safe(feePercent),
+  };
 }

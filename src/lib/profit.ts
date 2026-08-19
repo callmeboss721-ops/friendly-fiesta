@@ -13,17 +13,36 @@ export interface ProfitResult {
   profitPercent: number;  // % กำไร
 }
 
+/** กันค่า NaN/Infinity ไม่ให้เข้าสู่ ledger — คืน 0 เมื่อคำนวณไม่ได้ */
+export function safeNumber(value: number): number {
+  return Number.isFinite(value) ? value : 0;
+}
+
+/** ปัดเป็นทศนิยม 2 ตำแหน่งแบบ deterministic (กัน floating-point drift ใน ledger) */
+export function round2(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
 export function calculateProfit(
   thbAmount: number,
   usdtAmount: number,
   sellRate: number,
 ): ProfitResult {
-  const costPerUnit = usdtAmount > 0 ? thbAmount / usdtAmount : 0;
-  const sellValueThb = usdtAmount * sellRate;
-  const netProfitThb = sellValueThb - thbAmount;
-  const profitPercent = thbAmount > 0 ? (netProfitThb / thbAmount) * 100 : 0;
+  const thb = safeNumber(thbAmount);
+  const usdt = safeNumber(usdtAmount);
+  const rate = safeNumber(sellRate);
+  const costPerUnit = usdt > 0 ? thb / usdt : 0;
+  const sellValueThb = usdt * rate;
+  const netProfitThb = sellValueThb - thb;
+  const profitPercent = thb > 0 ? (netProfitThb / thb) * 100 : 0;
 
-  return { costPerUnit, sellValueThb, netProfitThb, profitPercent };
+  return {
+    costPerUnit: safeNumber(costPerUnit),
+    sellValueThb: safeNumber(sellValueThb),
+    netProfitThb: safeNumber(netProfitThb),
+    profitPercent: safeNumber(profitPercent),
+  };
 }
 
 /**
@@ -37,13 +56,16 @@ export function calculateDepositProfit(
   usdtAmount: number,
   marketRate: number,
 ): ProfitResult {
-  const costThb = usdtAmount * marketRate; // ต้นทุนซื้อ USDT ที่จะส่ง
-  const netProfitThb = thbAmount - costThb;
-  const profitPercent = thbAmount > 0 ? (netProfitThb / thbAmount) * 100 : 0;
+  const thb = safeNumber(thbAmount);
+  const usdt = safeNumber(usdtAmount);
+  const rate = safeNumber(marketRate);
+  const costThb = usdt * rate; // ต้นทุนซื้อ USDT ที่จะส่ง
+  const netProfitThb = thb - costThb;
+  const profitPercent = thb > 0 ? (netProfitThb / thb) * 100 : 0;
   return {
-    costPerUnit: marketRate,
-    sellValueThb: thbAmount,
-    netProfitThb,
-    profitPercent,
+    costPerUnit: rate,
+    sellValueThb: thb,
+    netProfitThb: safeNumber(netProfitThb),
+    profitPercent: safeNumber(profitPercent),
   };
 }
