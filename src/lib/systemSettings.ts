@@ -4,6 +4,7 @@
 // - ถ้าตาราง/DB มีปัญหา → ถือว่าบอทเปิด (fail-open) เพื่อไม่ให้บอทตายทั้งระบบ
 // ============================================================
 import { supabaseAdmin } from './supabaseAdmin';
+import { agentLog } from './debugAgentLog';
 
 const CACHE_TTL_MS = 10_000;
 
@@ -38,8 +39,14 @@ export async function getBotGate(): Promise<BotGate> {
           : 'ระบบกำลังปิดปรับปรุงชั่วคราว กรุณาลองใหม่ภายหลัง',
     };
     cache = { ...gate, fetchedAt: Date.now() };
+    // #region agent log
+    try { agentLog('B', 'systemSettings.ts:getBotGate', 'gate_ok', { botEnabled: gate.botEnabled, rowCount: (data ?? []).length }); } catch { /* noop */ }
+    // #endregion
     return gate;
-  } catch {
+  } catch (e: any) {
+    // #region agent log
+    try { agentLog('B', 'systemSettings.ts:getBotGate', 'gate_fail_open', { errorMessage: String(e?.message ?? e).slice(0, 200), errorCode: e?.code ?? null }); } catch { /* noop */ }
+    // #endregion
     return {
       botEnabled: true,
       maintenanceMessage: 'ระบบกำลังปิดปรับปรุงชั่วคราว กรุณาลองใหม่ภายหลัง',
