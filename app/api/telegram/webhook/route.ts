@@ -61,10 +61,8 @@ import {
   getOcrAutoMin,
   getSupabaseAdminKey,
   getTelegramWebhookSecret,
-  getSupabaseUrl,
   validateWebhookEnvironment,
 } from '@/lib/runtimeEnv';
-import { agentLog } from '@/lib/debugAgentLog';
 import {
   accountLast4,
   listPinnedBanks,
@@ -136,44 +134,14 @@ export async function POST(req: NextRequest) {
     const update = await req.json();
     failureChatId = Number(update?.callback_query?.message?.chat?.id ?? update?.message?.chat?.id) || null;
     const updateId = Number(update?.update_id);
-    // #region agent log
-    try {
-      agentLog('D', 'webhook/route.ts:POST-parse', 'parsed_update', {
-        updateId,
-        rawUpdateIdType: typeof update?.update_id,
-        keys: Object.keys(update ?? {}),
-        hasMessage: Boolean(update?.message),
-        hasCallback: Boolean(update?.callback_query),
-        chatId: failureChatId,
-        supabaseHost: (() => { try { return new URL(getSupabaseUrl() || 'http://invalid').host; } catch { return 'invalid'; } })(),
-      });
-    } catch { /* debug log must never break webhook */ }
-    // #endregion
     if (!Number.isSafeInteger(updateId) || updateId < 0) {
       return NextResponse.json({ ok: false, error: 'invalid_update' }, { status: 400 });
     }
     const { data: claimed, error: claimError } = await supabaseAdmin.rpc('claim_telegram_update', {
       p_update_id: updateId,
     });
-    // #region agent log
-    try {
-      agentLog('A', 'webhook/route.ts:POST-claim', 'claim_telegram_update_result', {
-        updateId,
-        claimed: claimed ?? null,
-        claimErrorCode: claimError?.code ?? null,
-        claimErrorMessage: claimError?.message ?? null,
-        claimErrorDetails: claimError?.details ?? null,
-        claimErrorHint: claimError?.hint ?? null,
-      });
-    } catch { /* noop */ }
-    // #endregion
     if (claimError) throw new Error(`DATABASE_MIGRATION_REQUIRED: ${claimError.message}`);
-    if (!claimed) {
-      // #region agent log
-      try { agentLog('F', 'webhook/route.ts:POST-duplicate', 'claim_returned_false', { updateId }); } catch { /* noop */ }
-      // #endregion
-      return NextResponse.json({ ok: true, duplicate: true });
-    }
+    if (!claimed) return NextResponse.json({ ok: true, duplicate: true });
     claimedUpdateId = updateId;
     log(`📨 incoming update #${updateId}`);
 
@@ -200,32 +168,8 @@ export async function POST(req: NextRequest) {
     ]);
     log(`✅ update #${updateId} processed`);
   } catch (e: any) {
-    // #region agent log
-    try {
-      const msg = String(e?.message || e);
-      agentLog('C', 'webhook/route.ts:POST-catch', 'webhook_processing_failed', {
-        errorMessage: msg.slice(0, 300),
-        errorName: e?.name ?? null,
-        isTimeout: msg.includes('WEBHOOK_TIMEOUT'),
-        isMigration: msg.includes('DATABASE_MIGRATION_REQUIRED'),
-        isUnique: /23505|duplicate key|unique constraint/i.test(msg),
-        claimedUpdateId,
-        failureChatId,
-        stackHead: String(e?.stack || '').split('\n').slice(0, 4).join(' | ').slice(0, 400),
-      });
-    } catch { /* noop */ }
-    // #endregion
     log(`⚠️ webhook error: ${e?.message || e}`, e?.stack?.slice(0, 200));
     if (isUnreachableChatError(e)) {
-      // #region agent log
-      try {
-        agentLog('C', 'webhook/route.ts:POST-catch', 'unreachable_chat_acked', {
-          claimedUpdateId,
-          failureChatId,
-          errorMessage: String(e?.message || e).slice(0, 300),
-        });
-      } catch { /* noop */ }
-      // #endregion
       // Keep the claim so Telegram does not retry a chat that cannot receive messages.
       return NextResponse.json({ ok: true, skipped: 'unreachable_chat' });
     }
@@ -279,13 +223,6 @@ async function handleUpdate(update: any): Promise<void> {
   const isGroup = chatType === 'group' || chatType === 'supergroup';
   const cmd = commandName(text);
   const hasMedia = isSlipMediaMessage(msg);
-  // #region agent log
-  try {
-    agentLog('E', 'webhook/route.ts:handleUpdate-entry', 'handle_update_start', {
-      chatId, userId, cmd, hasMedia, chatType, textLen: text.length,
-    });
-  } catch { /* noop */ }
-  // #endregion
   const admin = await resolveAdmin(msg.from, userId);
 
   if ((requiresAdminAccess(text) || hasMedia) && !admin) {

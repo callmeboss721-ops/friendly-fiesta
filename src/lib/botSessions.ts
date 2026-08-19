@@ -2,7 +2,6 @@
 // จัดการสถานะสนทนาต่อผู้ใช้ + chat-level settings (per-group rate)
 // ============================================================
 import { supabaseAdmin } from './supabaseAdmin';
-import { agentLog } from './debugAgentLog';
 
 export type SessionState = 'AWAITING_NAME' | 'AWAITING_AMOUNT' | 'EDITING' | 'WAITING_USDT';
 
@@ -41,15 +40,6 @@ export async function getSession(chatId: number, userId: number): Promise<BotSes
     .eq('chat_id', chatId)
     .eq('telegram_user_id', userId)
     .maybeSingle();
-  // #region agent log
-  try {
-    agentLog('E', 'botSessions.ts:getSession', error ? 'session_query_error' : 'session_query_ok', {
-      found: Boolean(data),
-      errorCode: error?.code ?? null,
-      errorMessage: error?.message ? String(error.message).slice(0, 200) : null,
-    });
-  } catch { /* noop */ }
-  // #endregion
   if (error) throw error;
   return (data as BotSession) ?? null;
 }

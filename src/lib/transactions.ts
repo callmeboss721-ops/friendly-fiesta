@@ -2,7 +2,6 @@
 // Service กลางสำหรับบันทึกธุรกรรม — ใช้ร่วมกันทั้ง API route และ Telegram webhook
 // ============================================================
 import { supabaseAdmin } from './supabaseAdmin';
-import { agentLog } from './debugAgentLog';
 import { calculateDepositProfit, ProfitResult, round2, thbToUsdt, usdtToThb } from './profit';
 import { calculateFee, FeeResult } from './fees';
 import { fetchBinanceThUsdtRate } from './binance';
@@ -87,15 +86,6 @@ export async function getAdminByTelegramId(telegramId: number): Promise<Admin | 
     .select('*')
     .eq('telegram_user_id', telegramId)
     .maybeSingle();
-  // #region agent log
-  try {
-    agentLog('E', 'transactions.ts:getAdminByTelegramId', error ? 'admin_query_error' : 'admin_query_ok', {
-      found: Boolean(data),
-      errorCode: error?.code ?? null,
-      errorMessage: error?.message ? String(error.message).slice(0, 200) : null,
-    });
-  } catch { /* noop */ }
-  // #endregion
   if (error) throw error;
   return (data as Admin) ?? null;
 }
