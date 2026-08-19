@@ -216,4 +216,141 @@ const uiSamples = [
 assert(uiSamples.every((message: { text: string }) => message.text.length <= 4096), 'enterprise UI samples stay within Telegram message limits');
 assert(uiSamples.every((message: { text: string }) => hasBalancedTelegramHtml(message.text)), 'enterprise UI samples use balanced Telegram HTML');
 
+// ============================================================
+// Direction handling: THB must be IN (+), USDT must be OUT (-)
+// ============================================================
+assert(parseAmounts('+500B').thb?.sign === 1, 'THB deposit is a positive direction (+500B)');
+assert(parseAmounts('-13.6U').usdt?.sign === -1, 'USDT send is a negative direction (-13.6U)');
+assert(parseAmounts('-500B').thb?.sign === -1, 'wrong-direction THB (-500B) is parsed with a negative sign for the handler to reject');
+assert(parseAmounts('+13.6U').usdt?.sign === 1, 'wrong-direction USDT (+13.6U) is parsed with a positive sign for the handler to reject');
+assert(parseAmounts('+500THB -13.6USDT').thb?.value === 500 && parseAmounts('+500THB -13.6USDT').usdt?.value === 13.6, 'accepts long currency suffixes +500THB -13.6USDT');
+assert(parseAmounts('500').hasBareNumber === true && !parseAmounts('500').thb && !parseAmounts('500').usdt, 'bare "500" never resolves to an amount');
+
+// ============================================================
+// Money calculation: rounding, floating point, NaN, Infinity, zero, negatives, missing rate
+// ============================================================
+const {
+  calculateProfit,
+  calculateDepositProfit,
+  round2,
+  safeNumber,
+} = require('../src/lib/profit');
+const { calculateFee } = require('../src/lib/fees');
+
+const finiteResult = (r: { costPerUnit: number; sellValueThb: number; netProfitThb: number; profitPercent: number }) =>
+  [r.costPerUnit, r.sellValueThb, r.netProfitThb, r.profitPercent].every((n) => Number.isFinite(n));
+
+const deposit = calculateDepositProfit(5000, 140, 34.8);
+assert(round2(deposit.netProfitThb) === 128, `deposit profit 5000 THB / 140 USDT @34.8 = 128 (got ${deposit.netProfitThb})`);
+assert(round2(deposit.profitPercent) === 2.56, `deposit profit percent = 2.56% (got ${deposit.profitPercent})`);
+assert(finiteResult(calculateDepositProfit(1000, 0, 0)), 'deposit profit with zero usdt and zero rate stays finite');
+assert(finiteResult(calculateDepositProfit(NaN, 10, 34.8)), 'deposit profit with NaN THB stays finite');
+assert(finiteResult(calculateDepositProfit(1000, 10, Infinity)), 'deposit profit with Infinity rate stays finite');
+assert(calculateProfit(1000, 0, 35).costPerUnit === 0, 'cost per unit is 0 when usdt is 0 (no division by zero)');
+assert(finiteResult(calculateProfit(-5000, -140, -35)), 'profit calc with negative inputs stays finite');
+const feeZeroRate = calculateFee(5000, 0, 140);
+assert(feeZeroRate.expectedUsdt === 0 && Number.isFinite(feeZeroRate.feeUsdt) && Number.isFinite(feeZeroRate.feePercent), 'fee calc with missing rate is finite and expects 0 USDT');
+assert(round2(calculateFee(5000, 34.8, 140).expectedUsdt) === 143.68, 'fee expected USDT rounds deterministically to 143.68');
+assert(round2(0.1 + 0.2) === 0.3, 'round2 removes floating-point drift (0.1 + 0.2 -> 0.3)');
+assert(round2(203.8000000000011) === 203.8, 'round2 fixes ledger drift to 203.8');
+assert(safeNumber(1 / 0) === 0 && safeNumber(NaN) === 0 && safeNumber(42) === 42, 'safeNumber clamps NaN/Infinity to 0 and preserves finite values');
+
+// ============================================================
+// Pinned bank matching: match, mismatch, false-positive prevention, aliases
+// ============================================================
+const { matchPinnedBank, accountLast4 } = require('../src/lib/banks');
+const pinnedBanks = [
+  { id: 'b1', bank_name: 'KBANK', account_number: '1234567890', label: '' },
+  { id: 'b2', bank_name: 'SCB', account_number: '9876543210', label: '' },
+];
+assert(matchPinnedBank('KBANK', '7890', pinnedBanks)?.id === 'b1', 'pinned bank matches on bank + last4');
+assert(matchPinnedBank('KASIKORN', '7890', pinnedBanks)?.id === 'b1', 'pinned bank matches via bank alias (KASIKORN -> KBANK)');
+assert(matchPinnedBank('SCB', '7890', pinnedBanks) === null, 'mismatch: correct last4 but wrong bank is rejected (no false positive)');
+assert(matchPinnedBank('KBANK', '0000', pinnedBanks) === null, 'mismatch: correct bank but wrong last4 is rejected (no false positive)');
+assert(matchPinnedBank(null, '7890', pinnedBanks) === null, 'match requires both bank and last4 (missing bank -> null)');
+assert(matchPinnedBank('KBANK', null, pinnedBanks) === null, 'match requires both bank and last4 (missing last4 -> null)');
+assert(accountLast4('1234567890') === '7890' && accountLast4('12') === null, 'accountLast4 extracts trailing 4 digits and guards short input');
+
+// ============================================================
+// Ledger reference: format #CE-YYYYMMDD-XXXX + uniqueness (collision resistance)
+// ============================================================
+const ledgerFormat = /^CE-\d{8}-[0-9A-F]{8}$/;
+assert(ledgerFormat.test(UI.newLedgerRef()), `ledger reference matches CE-YYYYMMDD-XXXX (got ${UI.newLedgerRef()})`);
+const refs = new Set<string>();
+for (let i = 0; i < 2000; i++) refs.add(UI.newLedgerRef());
+assert(refs.size === 2000, `2000 ledger references are unique (got ${refs.size})`);
+
+// ============================================================
+// /recent_slips limit parsing (valid args + invalid number protection)
+// ============================================================
+assert(parseRecentLimit('/recent_slips') === 5, '/recent_slips defaults to 5');
+assert(parseRecentLimit('/recent_slips 10') === 10, '/recent_slips 10 -> 10');
+assert(parseRecentLimit('/recent_slips 20') === 20, '/recent_slips 20 -> 20 (upper bound)');
+assert(parseRecentLimit('/recent_slips@cevault_bot 15') === 15, '/recent_slips honours bot mention suffix');
+assert(parseRecentLimit('/recent_slips 21') === null, '/recent_slips rejects 21 (above bound)');
+assert(parseRecentLimit('/recent_slips 0') === null, '/recent_slips rejects 0');
+assert(parseRecentLimit('/recent_slips -5') === null, '/recent_slips rejects negative');
+assert(parseRecentLimit('/recent_slips abc') === null, '/recent_slips rejects non-numeric argument');
+
+// ============================================================
+// /recent_slips rendering: empty state, required fields, escaping, length, mentions
+// ============================================================
+const emptySlips = UI.recentSlipsList([]);
+assert(emptySlips.text.includes('สลิปล่าสุด') && emptySlips.text.includes('ยังไม่มีรายการ'), 'recent slips renders an empty state when there is no data');
+
+const sampleSlips = [
+  {
+    ledgerRef: 'CE-20260819-AABBCCDD', type: 'THB_DEPOSIT', time: '04:13',
+    thb: 5000, usdt: 140, sellRate: 35.5,
+    adminName: 'Boss', adminTelegramId: 123456789,
+    receiverName: 'อัญยา', receiverBank: 'KBANK', receiverLast4: '1234',
+  },
+  {
+    ledgerRef: 'CE-20260819-11223344', type: 'USDT_SEND', time: '04:15',
+    thb: 0, usdt: 100, sellRate: null,
+    adminName: 'Boss', adminTelegramId: null,
+    receiverName: null, receiverBank: null, receiverLast4: null,
+  },
+];
+const rendered = UI.recentSlipsList(sampleSlips);
+assert(rendered.text.includes('CE-20260819-AABBCCDD'), 'recent slips shows the ledger reference');
+assert(rendered.text.includes('5,000 THB') && rendered.text.includes('140 USDT'), 'recent slips shows THB and USDT amounts');
+assert(rendered.text.includes('35.5'), 'recent slips shows the sell rate when present');
+assert(rendered.text.includes('04:13'), 'recent slips shows the transaction time');
+assert(rendered.text.includes('tg://user?id=123456789'), 'recent slips mentions admins via tg://user when telegram id is present');
+assert(rendered.text.includes('อัญยา') && rendered.text.includes('1234'), 'recent slips shows receiver details when available');
+assert(hasBalancedTelegramHtml(rendered.text), 'recent slips uses balanced Telegram HTML');
+
+const maliciousSlips = [
+  {
+    ledgerRef: '<b>evil</b>', type: 'THB_DEPOSIT', time: '00:00',
+    thb: 1, usdt: 1, sellRate: 1,
+    adminName: '<script>alert(1)</script>', adminTelegramId: null,
+    receiverName: '<img src=x>', receiverBank: '<i>', receiverLast4: '9999',
+  },
+];
+const escaped = UI.recentSlipsList(maliciousSlips);
+assert(!escaped.text.includes('<script>') && escaped.text.includes('&lt;script&gt;'), 'recent slips escapes malicious admin name from the database');
+assert(!escaped.text.includes('<img src=x>') && escaped.text.includes('&lt;img'), 'recent slips escapes malicious receiver name from the database');
+assert(hasBalancedTelegramHtml(escaped.text), 'recent slips stays valid HTML even with hostile database values');
+
+const manySlips = Array.from({ length: 20 }, (_, i) => ({
+  ledgerRef: `CE-20260819-${String(i).padStart(8, '0')}`, type: 'THB_DEPOSIT', time: '04:13',
+  thb: 999999, usdt: 99999, sellRate: 35.5,
+  adminName: 'Operator With A Fairly Long Display Name', adminTelegramId: 111111111 + i,
+  receiverName: 'ผู้รับที่มีชื่อยาวพอสมควรสำหรับการทดสอบความยาว', receiverBank: 'KBANK', receiverLast4: '1234',
+}));
+assert(UI.recentSlipsList(manySlips).text.length <= 4096, 'recent slips never exceeds the Telegram 4096-character limit');
+
+// ============================================================
+// /save_slip + admin-only command authorization
+// ============================================================
+assert(requiresAdminAccess('/save_slip') === true, '/save_slip requires admin access');
+assert(requiresAdminAccess('/save_slip +500B') === true, '/save_slip with args requires admin access');
+assert(requiresAdminAccess('/pin KBANK 1234567890') === true, '/pin requires admin access');
+assert(requiresAdminAccess('/unpin 1') === true, '/unpin requires admin access');
+assert(requiresAdminAccess('สวัสดี') === false, 'plain chat does not require admin access');
+assert(parseSaveSlipArgs('/save_slip +500B KBANK 7890')?.bank === 'KBANK', '/save_slip parses explicit bank via alias normalisation');
+assert(parseSaveSlipArgs('/save_slip +500') === null, '/save_slip rejects amount without currency');
+
 console.log('🎉 ALL TESTS PASSED SUCCESSFULLY!');
