@@ -75,7 +75,11 @@ ensure_docker() {
   sudo sysctl -w net.ipv4.ip_forward=1 >/dev/null 2>&1 || true
   sudo sysctl -w net.bridge.bridge-nf-call-iptables=0 >/dev/null 2>&1 || true
   sudo iptables-legacy -P FORWARD ACCEPT 2>/dev/null || true
-  sudo nohup dockerd >/tmp/dockerd.log 2>&1 &
+  # Close FD 9 (the flock lock fd from main()) for the long-lived daemon so it
+  # does not inherit and pin the advisory lock for the whole life of the VM.
+  # Otherwise a later cloud-supabase-up.sh (e.g. the next-dev terminal) blocks
+  # on `flock -w 180 9` for the full timeout before the dev server can start.
+  sudo nohup dockerd >/tmp/dockerd.log 2>&1 9>&- &
   for _ in $(seq 1 30); do docker info >/dev/null 2>&1 && break; sleep 2; done
 }
 
