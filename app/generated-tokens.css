@@ -1,0 +1,26 @@
+/* Generated from tokens/ce-empire-2026.json. Do not edit directly. */
+:root {
+  --ce-color-canvas: #050814;
+  --ce-color-surface: #0a1220;
+  --ce-color-surface-raised: #0e1a2c;
+  --ce-color-text: #d7f4ff;
+  --ce-color-text-muted: #a8c6d4;
+  --ce-color-brand: #5ee7ff;
+  --ce-color-success: #1ee08a;
+  --ce-color-danger: #ff3355;
+  --ce-space-1: 0.25rem;
+  --ce-space-2: 0.5rem;
+  --ce-space-3: 0.75rem;
+  --ce-space-4: 1rem;
+  --ce-space-5: 1.25rem;
+  --ce-space-6: 1.5rem;
+  --ce-radius-sm: 0.5rem;
+  --ce-radius-md: 0.75rem;
+  --ce-radius-lg: 1rem;
+  --ce-radius-xl: 1.25rem;
+  --ce-motion-fast: 140ms;
+  --ce-motion-normal: 220ms;
+  --ce-motion-slow: 420ms;
+  --ce-shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.28);
+  --ce-shadow-brand: 0 0 28px rgba(94, 231, 255, 0.14);
+}
