@@ -2,6 +2,30 @@
 
 import SyncBadge, { type SyncStatus } from './SyncBadge';
 
+const BANK_LOGOS: Record<string, string> = {
+  KBANK: 'https://cdn.simpleicons.org/kasikornbank/00A651',
+  SCB: 'https://cdn.simpleicons.org/siamcommercialbank/4B2E83',
+  KTB: 'https://cdn.simpleicons.org/krungthaibank/00A6E6',
+  BBL: 'https://cdn.simpleicons.org/bangkokbank/1E4596',
+  BAY: 'https://cdn.simpleicons.org/krungsri/FFD400',
+  TTB: 'https://cdn.simpleicons.org/ttbbank/005BAC',
+  GSB: 'https://cdn.simpleicons.org/gsb/EB1C24',
+};
+
+function bankLogo(bankName: string) {
+  const code = bankName.toUpperCase().replace(/[^A-Z]/g, '');
+  return BANK_LOGOS[code] ?? null;
+}
+
+function BankLogo({ bankName }: { bankName: string }) {
+  const src = bankLogo(bankName);
+  return src ? (
+    <img className="bank-logo" src={src} alt={`${bankName} logo`} width={36} height={36} loading="lazy" />
+  ) : (
+    <span className="bank-logo bank-logo--fallback" aria-hidden="true">{bankName.slice(0, 2)}</span>
+  );
+}
+
 export interface PinnedAccount {
   id: string;
   bankAccountId: string;
@@ -105,14 +129,19 @@ export default function PinnedAccounts({
               disabled={isLoading}
               className={`w-full px-5 py-3 text-left disabled:opacity-50 ${on ? 'bg-[color:var(--bg-subtle)]' : 'hover:bg-[color:var(--bg-subtle)]'}`}
             >
-              <div className="flex items-baseline justify-between gap-3">
-                <p className="min-w-0 truncate text-sm font-semibold">{acc.accountName}</p>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <BankLogo bankName={acc.bankName} />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{acc.accountName}</p>
+                    <p className="mt-1 text-xs text-[color:var(--fg)]">
+                      {acc.bankName}{' '}
+                      <span className="font-mono text-gold">{acc.accountNumber || `····${acc.last4}`}</span>
+                    </p>
+                  </div>
+                </div>
                 <span className={`pill ${acc.status === 'active' ? 'pill-wait' : 'pill-done'}`}>ปักอยู่</span>
               </div>
-              <p className="mt-1 text-xs text-[color:var(--fg)]">
-                {acc.bankName}{' '}
-                <span className="font-mono text-gold">{acc.accountNumber || `····${acc.last4}`}</span>
-              </p>
               <p className="mt-1 font-mono text-xs font-medium text-[color:var(--fg)]">
                 รับแล้ว {nf.format(acc.totalThb)} บาท · {acc.transactionCount} รายการ
                 {cap != null ? ` · วงเงิน ${nf.format(cap)} · ใช้ไป ${nf.format(acc.totalThb)} · เหลือ ${nf.format(left ?? 0)}` : ''}
