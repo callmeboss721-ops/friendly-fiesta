@@ -1,12 +1,20 @@
 // GET /api/admin/bank-accounts — รายชื่อบัญชีธนาคารทั้งหมด (ใช้เป็นตัวเลือกตอน pin)
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { getSupabaseAdminKey, getSupabaseUrl } from '@/lib/runtimeEnv';
 
 export const runtime = 'nodejs';
 export const revalidate = 0;
 
 export async function GET() {
-  const { data, error } = await supabaseAdmin?.from('bank_accounts')?.select('id, label, bank_name, account_number, current_balance')?.order('label', { ascending: true });
+  if (!getSupabaseUrl() || !getSupabaseAdminKey()) {
+    return NextResponse.json(
+      { data: [], error: { code: 'NOT_CONFIGURED', message: 'ยังไม่ได้เชื่อมต่อฐานข้อมูล' } },
+      { status: 503 },
+    );
+  }
+
+  const { data, error } = await supabaseAdmin.from('bank_accounts').select('id, label, bank_name, account_number, current_balance').order('label', { ascending: true });
 
   if (error) {
     return NextResponse?.json(

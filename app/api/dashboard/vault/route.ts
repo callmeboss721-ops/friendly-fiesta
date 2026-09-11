@@ -6,6 +6,7 @@ import { requireDashboardSession } from '@/lib/dashboardAuth';
 import { ensureTodayPins, accountLast4Candidates } from '@/lib/banks';
 import { opsChatId } from '@/lib/ct/deskChat';
 import { quarantineOcrJunk } from '@/lib/ct/store';
+import { getSupabaseAdminKey, getSupabaseUrl } from '@/lib/runtimeEnv';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -13,6 +14,12 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: NextRequest) {
   const denied = await requireDashboardSession(req);
   if (denied) return denied;
+  if (!getSupabaseUrl() || !getSupabaseAdminKey()) {
+    return NextResponse.json(
+      { ok: false, error: 'ยังไม่ได้เชื่อมต่อฐานข้อมูล' },
+      { status: 503 },
+    );
+  }
   const chatParam = req.nextUrl.searchParams.get('chatId');
   const chatId = chatParam ? Number(chatParam) : await opsChatId(null);
   const mode = (req.nextUrl.searchParams.get('mode') as 'today' | 'pending' | 'all') || 'today';
