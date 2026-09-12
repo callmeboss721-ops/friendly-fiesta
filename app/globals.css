@@ -1,22 +1,23 @@
 /* CT desk — navy HUD, cyan figures, green confirm */
+@import './generated-tokens.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --bg: #050814;
-  --bg-elevated: #0a1220;
-  --bg-subtle: #0e1a2c;
+  --bg: var(--ce-color-canvas);
+  --bg-elevated: var(--ce-color-surface);
+  --bg-subtle: var(--ce-color-surface-raised);
   --panel: rgba(8, 18, 34, 0.82);
-  --fg: #d7f4ff;
-  --fg-muted: #a8c6d4;
+  --fg: var(--ce-color-text);
+  --fg-muted: var(--ce-color-text-muted);
   --fg-subtle: #8aa8b4;
-  --gold: #5ee7ff;
+  --gold: var(--ce-color-brand);
   --gold-dim: color-mix(in srgb, var(--gold) 16%, transparent);
-  --cyan: #1ee08a;
+  --cyan: var(--ce-color-success);
   --cyan-dim: color-mix(in srgb, var(--cyan) 16%, transparent);
   --line: rgba(94, 231, 255, 0.18);
-  --danger: #ff3355;
+  --danger: var(--ce-color-danger);
   --text: var(--fg);
   --muted: var(--fg-muted);
   --border: var(--line);
