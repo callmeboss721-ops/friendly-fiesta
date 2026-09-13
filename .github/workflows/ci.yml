@@ -11,9 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Use Node.js 20.x
-        uses: actions/setup-node@v4
-        with:
+      - name: Use Node.js 22.x uses: actions/setup-node@v4 with: node-version: '22.x' cache: 'npmมา
           node-version: '20.x'
           cache: 'npm'
       - run: npm ci

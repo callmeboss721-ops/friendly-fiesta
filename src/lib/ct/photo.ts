@@ -8,7 +8,8 @@ import { parseDeskPin } from '../../bot/parse';
 import { gateOcr, type OcrGate } from './gate';
 import { opsRates } from './rates';
 import { insertPending, findPendingByFingerprint, type PendingSlip } from './store';
-import { shouldSend, clockBkk } from './format';
+import { clockBkk } from './format';
+import { VaultEngine } from './vaultEngine';
 import { canAutoQueue, commitIncomingLock, dueSummary } from './queue';
 import { isOcrJunkAmount } from './settleGuard';
 import { applyQrToOcr, type SlipQrResult } from './slipQr';
@@ -159,7 +160,7 @@ export async function handleCtPhoto(opts: { chatId: number; userId: number; admi
   const qrVerified = Boolean(qr?.inquiry?.valid);
   let gate = gateOcr({ thb, confidence: slip.confidence, pinMatch, hasCurrency: thb != null, qrVerified });
   if (qr?.inquiry && qr.inquiry.valid === false) gate = 'OCR_WEAK';
-  const usdtDue = thb && rates.desk ? shouldSend(thb, rates.desk) : null;
+  const usdtDue = thb && rates.desk ? VaultEngine.verifyReceive({ thb, rate: rates.desk, confidence: slip.confidence ?? null, pinMatch, qrVerified: Boolean(qr) }).expectedUsdt : null;
   ctx.usdt = usdtDue;
   await ai.step('calc', ctx);
   const notes = [
