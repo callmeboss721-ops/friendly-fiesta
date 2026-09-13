@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import BankLogo from '@/components/BankLogo';
+import { resolveBank } from '@/lib/bankBrands';
 import { SlipCard } from './SlipCard';
 
 type TapeRow = {
@@ -61,7 +63,7 @@ function badgeOf(status: string, pending: boolean) {
 }
 
 function acct(row: TapeRow) {
-  if (row.last4) return (row.bank ? `${row.bank} ` : '') + `····${row.last4}`;
+  if (row.last4) return row.last4;
   return row.short || '—';
 }
 
@@ -128,9 +130,16 @@ export function QueueTape({
         <p className="qd-mark">CT · สมุดรายการ</p>
         <p className="qd-clock">{dateLabel} {clock}</p>
       </div>
-      <div className="qd-pills" role="tablist">
+      <div className="qd-pills" role="tablist" aria-label="กรองรายการตามสถานะ">
         {(['WAIT', 'HOLD', 'DONE', 'ERR', 'ALL'] as QueueFilter[]).map((f) => (
-          <button key={f} type="button" className={'qd-pill' + (filter === f ? ' is-on' : '')} onClick={() => setFilter(f)}>
+          <button
+            key={f}
+            type="button"
+            role="tab"
+            aria-selected={filter === f}
+            className={'qd-pill' + (filter === f ? ' is-on' : '')}
+            onClick={() => setFilter(f)}
+          >
             {FILTER_LABEL[f]}{f === 'HOLD' && holdCount ? ` ${holdCount}` : ''}
           </button>
         ))}
@@ -148,10 +157,21 @@ export function QueueTape({
           const badge = badgeOf(row.status, row.pending);
           const dueU = row.dueUsdt ?? row.expectedUsdt ?? row.usdt;
           const state = rowState(row.status, row.pending);
+          const bank = resolveBank(row.bank);
           return (
-            <div key={row.id} role="button" tabIndex={0} onClick={() => setOpen(row)} onKeyDown={(e) => { if (e.key === 'Enter') setOpen(row); }} className={'qd-row' + (flash.has(row.id) ? ' is-flash' : '')} data-status={state} style={{ ['--row-state' as string]: state, ['--i' as string]: Math.min(i, 12) }}>
+            <div
+              key={row.id}
+              role="button"
+              tabIndex={0}
+              aria-label={`เปิดรายการ ${bank.code} ${acct(row)} ยอด ${n(row.thb)} บาท`}
+              onClick={() => setOpen(row)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(row); } }}
+              className={'qd-row' + (flash.has(row.id) ? ' is-flash' : '')}
+              data-status={state}
+              style={{ ['--row-state' as string]: state, ['--i' as string]: Math.min(i, 12) }}
+            >
               <span className="qd-time">{row.time || '—'}</span>
-              <span className="qd-acct">{acct(row)}</span>
+              <span className="qd-acct"><BankLogo bankName={row.bank} size="sm" decorative /><span><b>{bank.code}</b>{acct(row)}</span></span>
               <span className="qd-thb">{row.thb == null ? '—' : n(row.thb)}</span>
               <span className="qd-usdt">{n(dueU, 2)}</span>
               <span className="st">{badge.label}</span>

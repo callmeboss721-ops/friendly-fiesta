@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
 const source = await readFile(resolve(root, 'src/lib/bankBrands.ts'), 'utf8');
-for (const code of ['KBANK', 'SCB', 'KTB', 'BBL', 'BAY', 'TTB', 'GSB']) {
+for (const code of ['SCB', 'KBANK', 'KTB', 'BBL', 'BAY', 'TTB', 'GSB', 'BAAC', 'CIMB', 'UOB', 'LHBANK', 'KKP']) {
   if (!source.includes(`${code}:`)) throw new Error(`Missing bank registry entry: ${code}`);
 }
 const assetMatches = [...source.matchAll(/localAsset: '([^']+)'/g)].map((match) => match[1]);

@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "ts-node --project test/tsconfig.json test/run-test.ts && ts-node --project test/tsconfig.json test/desk-ops.test.ts && ts-node --project test/tsconfig.json test/fifty-rounds.ts && ts-node --project test/tsconfig.json test/reconciliation.test.ts",
+    "test": "ts-node --project test/tsconfig.json test/run-test.ts && ts-node --project test/tsconfig.json test/bank-identity.test.ts && ts-node --project test/tsconfig.json test/desk-ops.test.ts && ts-node --project test/tsconfig.json test/fifty-rounds.ts && ts-node --project test/tsconfig.json test/reconciliation.test.ts",
     "tokens:build": "node scripts/build-tokens.mjs",
     "tokens:check": "node scripts/build-tokens.mjs --check && node scripts/validate-tokens.mjs",
     "assets:check": "node scripts/validate-bank-assets.mjs",

@@ -210,8 +210,11 @@
   .ce-hero__copy strong { color: var(--fg); font-family: var(--font-display); font-size: clamp(1.05rem, 4vw, 1.55rem); line-height: 1.2; text-wrap: balance; }
   .ce-hero__copy > span:last-child { color: var(--fg-muted); font-size: 12px; }
   .eyebrow { color: var(--gold); font-family: var(--font-mono); font-size: 9px; letter-spacing: .12em; }
-  .bank-logo { flex: 0 0 auto; width: 36px; height: 36px; border-radius: 10px; object-fit: contain; background: #f8fafc; padding: 5px; box-shadow: 0 0 0 1px var(--line), 0 0 14px color-mix(in srgb, var(--gold) 12%, transparent); }
-  .bank-logo--fallback { display: grid; place-items: center; background: var(--bg-subtle); color: var(--gold); font-family: var(--font-mono); font-size: 11px; font-weight: 700; }
+  .bank-logo { flex: 0 0 auto; width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 10px; object-fit: contain; background: var(--bg-elevated); padding: 5px; box-shadow: 0 8px 20px color-mix(in srgb, var(--bg) 60%, transparent); }
+  .bank-logo--sm { width: 28px; height: 28px; border-radius: 8px; padding: 4px; }
+  .bank-logo--lg { width: 44px; height: 44px; border-radius: 12px; padding: 6px; }
+  .bank-logo--fallback { display: grid; place-items: center; color: var(--gold); font-family: var(--font-mono); font-size: 10px; font-weight: 750; letter-spacing: -0.04em; }
+  .bank-logo--fallback[data-bank-code='UNKNOWN'] { color: var(--fg-muted); }
   @media (min-width: 768px) { .ce-hero { margin-inline: 24px; } }
 
   .dense-nav { gap: var(--space-3); }

@@ -39,7 +39,7 @@ export function skeletonRead(): OutgoingMessage {
 }
 
 export function skeletonVault(): OutgoingMessage {
-  return msg(head('สรุปยอด', 'กำลังโหลด (loading)'));
+  return msg(head('สรุปยอด', 'กำลังอ่านยอดล่าสุดจาก VAULT'));
 }
 
 export function skeletonSettle(ledger: string, usdtAmt: number): OutgoingMessage {
@@ -352,7 +352,7 @@ export function cardPinMismatch(d: {
 
 export function cardForceAsk(d: { short: string; ledger: string }): OutgoingMessage {
   return msg(
-    `${head('แจ้งเตือน', 'ยืนยันบังคับรับรายการ (force)')}\n<code>${esc(displayLedger(d.ledger))}</code>\nกรุณายืนยันหากต้องการบันทึกทั้งที่บัญชีไม่ตรง`,
+    `${head('แจ้งเตือน', 'ยืนยันบังคับรับรายการ (force)')}\n<code>${esc(displayLedger(d.ledger))}</code>\nกรุณายืนยันหากต้องการบันทึกท��้งที่บัญชีไม่ตรง`,
     ik([
       [btn('บังคับบันทึก', `slip:force:${d.short}`, 'danger')],
       [btn('ยกเลิก', `slip:cancel:${d.short}`, 'primary')],

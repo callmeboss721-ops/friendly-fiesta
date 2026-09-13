@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import BankLogo from '@/components/BankLogo';
+import { resolveBank } from '@/lib/bankBrands';
 
 type Slip = {
   id: string;
@@ -24,16 +26,16 @@ function n(v: number | null | undefined, d = 0) {
   return Number(v).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 
-const STEPS = ['OCR', 'MATCH', 'IN', 'WAIT', 'DONE'] as const;
+const STEPS = ['BANK', 'PIN', 'DEPOSIT', 'OCR', 'MATCH', 'SETTLE', 'AUDIT'] as const;
 
 function onSteps(status: string, pending: boolean): number {
-  if (status === 'DONE') return 5;
-  if (status === 'HOLD') return 3;
-  if (status === 'ERR' || status === 'ERROR' || status === 'SCAN') return 1;
-  if (status === 'WAIT' || status === 'SENT' || status === 'QUEUE' || pending) return 4;
-  if (status === 'IN' || status === 'LOCK') return 3;
-  if (status === 'MATCH') return 2;
-  return 1;
+  if (status === 'DONE') return 7;
+  if (status === 'HOLD') return 5;
+  if (status === 'ERR' || status === 'ERROR' || status === 'SCAN') return 4;
+  if (status === 'WAIT' || status === 'SENT' || status === 'QUEUE' || pending) return 6;
+  if (status === 'IN' || status === 'LOCK') return 5;
+  if (status === 'MATCH') return 5;
+  return 3;
 }
 
 function statusLabel(status: string) {
@@ -72,7 +74,8 @@ export function SlipCard({ slip, onClose, queue, onKeep }: {
   const used = queue?.thb ?? 0;
   const left = Math.max(0, target - used);
   const dueAll = queue?.usdt ?? 0;
-  const payee = [slip.bank, slip.last4 || null].filter(Boolean).join(' ');
+  const bank = resolveBank(slip.bank);
+  const payee = [bank.code, slip.last4 || null].filter(Boolean).join(' ');
 
   async function copyRef() {
     if (!ref) return;
@@ -90,16 +93,22 @@ export function SlipCard({ slip, onClose, queue, onKeep }: {
         : 'รายการนี้ปิดแล้ว';
 
   return (
-    <article className="slip term">
+    <article className="slip term" aria-labelledby={`slip-${slip.id}`}>
       <div className="slip-head">
-        <span className="slip-tag">สลิป (SLIP) · {statusLabel(slip.status)}</span>
-        <button type="button" className="slip-x" onClick={onClose} aria-label="ปิด">ปิด</button>
+        <BankLogo bankName={slip.bank} size="lg" />
+        <span className="slip-title-wrap">
+          <span id={`slip-${slip.id}`} className="slip-tag">{bank.code} · {statusLabel(slip.status)}</span>
+          <span className="slip-bank-name">{bank.nameTh}</span>
+        </span>
+        <button type="button" className="slip-x" onClick={onClose} aria-label="ปิดรายละเอียดรายการ">ปิด</button>
       </div>
-      <p className="slip-rail">
+      <ol className="slip-rail" aria-label="สถานะรายการ 7 ขั้นตอน">
         {STEPS.map((s, i) => (
-          <span key={s} className={i < active ? 'on' : ''}>{(i < active ? '●' : '○') + ' ' + s}</span>
+          <li key={s} className={i < active ? 'on' : ''} aria-current={i === active - 1 ? 'step' : undefined}>
+            <span aria-hidden="true">{i < active ? '●' : '○'}</span>{s}
+          </li>
         ))}
-      </p>
+      </ol>
       <div className="slip-rule" />
       <div className="slip-row"><span>เวลา (TIME)</span><span>{slip.time || '—'}</span></div>
       <div className="slip-row"><span>เลขอ้างอิง (REF)</span><button type="button" className={'slip-copy' + (copied ? ' is-on' : '')} onClick={copyRef}>{copied ? 'คัดอยู่' : ref || '—'}</button></div>

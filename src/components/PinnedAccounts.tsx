@@ -2,6 +2,7 @@
 
 import BankLogo from './BankLogo';
 import SyncBadge, { type SyncStatus } from './SyncBadge';
+import { resolveBank } from '@/lib/bankBrands';
 
 export interface PinnedAccount {
   id: string;
@@ -72,7 +73,7 @@ export default function PinnedAccounts({
                 onClick={() => void onPin(c.id)}
                 className="keep px-3 py-2 text-xs"
               >
-                ใช้วันนี้ {c.bankName} ····{c.last4}
+                ใช้วันนี้ {c.bankName} {c.last4}
               </button>
             ))}
           </div>
@@ -97,6 +98,7 @@ export default function PinnedAccounts({
         {accounts.map((acc) => {
           const on = selectedAccountId === acc.bankAccountId;
           const cap = acc.dailyLimitThb;
+          const bank = resolveBank(acc.bankName);
           const left = cap != null ? Math.max(0, cap - acc.totalThb) : null;
           return (
             <button
@@ -112,8 +114,8 @@ export default function PinnedAccounts({
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">{acc.accountName}</p>
                     <p className="mt-1 text-xs text-[color:var(--fg)]">
-                      {acc.bankName}{' '}
-                      <span className="font-mono text-gold">{acc.accountNumber || `····${acc.last4}`}</span>
+                      <span className="font-mono font-semibold text-gold">{bank.code}</span>{' · '}{bank.nameTh}{' '}
+                      <span className="font-mono">{acc.accountNumber || acc.last4}</span>
                     </p>
                   </div>
                 </div>
