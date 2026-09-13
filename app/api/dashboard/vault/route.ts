@@ -6,11 +6,13 @@ import { requireDashboardSession } from '@/lib/dashboardAuth';
 import { ensureTodayPins, accountLast4Candidates } from '@/lib/banks';
 import { opsChatId } from '@/lib/ct/deskChat';
 import { quarantineOcrJunk } from '@/lib/ct/store';
+import { logServerError, requestId, safeErrorCode } from '@/lib/safeServerError';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
+  const id = requestId();
   const denied = await requireDashboardSession(req);
   if (denied) return denied;
   const chatParam = req.nextUrl.searchParams.get('chatId');
@@ -78,7 +80,8 @@ export async function GET(req: NextRequest) {
       accounts,
       queue: pending.data ?? [],
     });
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message ?? 'vault_failed' }, { status: 500 });
+  } catch (error) {
+    logServerError({ requestId: id, route: '/api/dashboard/vault', operation: 'load_vault', error });
+    return NextResponse.json({ ok: false, error: safeErrorCode(error), requestId: id }, { status: 500 });
   }
 }
