@@ -77,6 +77,7 @@ type VaultPayload = {
 };
 
 type RoomChoice = { chatId: number; name: string; desk: number | null; current?: boolean };
+type DeskScreen = 'HOME' | 'RECEIVE' | 'OPERATIONS' | 'SETTINGS';
 
 function money(n: number, d = 0) {
   return n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -84,6 +85,7 @@ function money(n: number, d = 0) {
 
 export default function VaultDesk() {
   const [data, setData] = useState<VaultPayload | null>(null);
+  const [screen, setScreen] = useState<DeskScreen>('HOME');
   const [error, setError] = useState<string | null>(null);
   const [deskDraft, setDeskDraft] = useState('');
   const [saving, setSaving] = useState(false);
@@ -372,32 +374,23 @@ export default function VaultDesk() {
           <span className={`pill hidden sm:inline-flex ${live ? 'pill-done' : 'pill-wait'}`}>
             {live ? 'สด' : 'รีเฟรช'}
           </span>
-          <span className="flex gap-1">
-            {(['today', 'pending'] as const).map((m) => (
+          <nav className="flex gap-1" aria-label="CE VAULT screens">
+            {(['HOME', 'RECEIVE', 'OPERATIONS', 'SETTINGS'] as const).map((item) => (
               <button
-                key={m}
+                key={item}
                 type="button"
-                className={'qd-pill' + (mode === m ? ' is-on' : '')}
-                onClick={() => setMode(m)}
+                className={'qd-pill' + (screen === item ? ' is-on' : '')}
+                onClick={() => {
+                  setScreen(item);
+                  if (item === 'OPERATIONS') setMode('pending');
+                  if (item === 'HOME') setMode('today');
+                }}
               >
-                {m === 'today' ? 'ดูยอดวันนี้' : 'เปิดคิวโอน'}
+                {{ HOME: 'HOME', RECEIVE: 'RECEIVE', OPERATIONS: 'OPERATIONS', SETTINGS: 'SETTINGS' }[item]}
               </button>
             ))}
-          </span>
-          <button
-            type="button"
-            className={'qd-pill' + (monitor ? ' is-on' : '')}
-            onClick={() => setMonitor((v) => !v)}
-          >
-            ตรวจสอบรายการ
-          </button>
-          <button
-            type="button"
-            className="qd-pill"
-            onClick={() => document.getElementById('desk-accounts')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-          >
-            ดูบัญชี
-          </button>
+          </nav>
+          {screen === 'SETTINGS' && <button type="button" className={'qd-pill' + (monitor ? ' is-on' : '')} onClick={() => setMonitor((v) => !v)}>Monitor</button>}
           {settleDue > 0 && (
             <span className="font-mono text-sm text-gold">รอโอน {money(settleDue, 2)}</span>
           )}
@@ -435,7 +428,7 @@ export default function VaultDesk() {
           <strong>{money(settleDue, 2)}</strong>
         </article>
       </div>
-      <section className="desk-settle" data-state={settleSt} aria-label="เคลียร์ยอด">
+      {screen === 'OPERATIONS' && <section className="desk-settle" data-state={settleSt} aria-label="เคลียร์ยอด">
         <header className="desk-settle__head">
           <p>เคลียร์ยอด</p>
           <span className="desk-settle__chip">
@@ -487,13 +480,14 @@ export default function VaultDesk() {
             </>
           )}
         </div>
-      </section>
+      </section>}
       <div className="agent-rail" />
       {error && <div className="noc-alert" role="alert">{error}</div>}
-      <StaffPlaybook />
-      <DeskApiPanel open={monitor} onClose={() => setMonitor(false)} />
+      {screen === 'RECEIVE' && <section className="desk-settle" aria-label="รับสลิป"><header className="desk-settle__head"><p>RECEIVE</p><span className="desk-settle__chip">Telegram</span></header><p className="px-4 pb-4 text-sm text-[color:var(--muted)]">ส่งสลิปใน Telegram เพื่อเริ่ม OCR → ตรวจบัญชี → ตรวจซ้ำ → ยืนยัน โดยใช้ข้อความเดิมเป็น context เดียว</p></section>}
+      {screen === 'HOME' && <StaffPlaybook />}
+      <DeskApiPanel open={screen === 'SETTINGS' && monitor} onClose={() => setMonitor(false)} />
       <div className="scan-ring" aria-hidden><span>{live ? 'กำลังตรวจสอบรายการ' : 'กำลังอัปเดตข้อมูล'}</span></div>
-      <div className="grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+      {screen === 'HOME' && <div className="grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <SummaryToday
           dateLabel={v ? `${v.dateLabel} ${v.clock}` : undefined}
           compact
@@ -518,9 +512,9 @@ export default function VaultDesk() {
         <div className="desk-pin" id="desk-accounts">
           <PinnedAccounts accounts={pinCards} catalog={catalog} onPin={pinAccount} pinning={pinning} lastSync={data ? new Date() : null} syncStatus={error ? 'error' : live ? 'live' : 'syncing'} />
         </div>
-      </div>
+      </div>}
       {error && <p className="sr-only">{error}</p>}
-      <form onSubmit={saveDesk} className="desk-rate">
+      {screen === 'SETTINGS' && <><form onSubmit={saveDesk} className="desk-rate">
         <label htmlFor="desk-rate">เราขาย{desk ? ` ตอนนี้ ${desk}` : ''}</label>
         <div className="desk-rate__row">
           <input
@@ -600,7 +594,8 @@ export default function VaultDesk() {
           {payoutNote}
         </p>
       </form>
-      <QueueTape
+      </> }
+      {screen === 'OPERATIONS' && <QueueTape
         rows={tape}
         dateLabel={v?.dateLabel ?? '\u2014'}
         clock={v?.clock ?? '\u2014'}
@@ -611,7 +606,7 @@ export default function VaultDesk() {
         onSettle={settleQueue}
         settling={settling}
         onKeep={(row) => keepSlip(row)}
-      />
+      />}
     </div>
   );
 }
