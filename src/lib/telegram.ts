@@ -3,11 +3,11 @@
 // ============================================================
 import { supabaseAdmin } from './supabaseAdmin';
 import { createHash, randomUUID } from 'crypto';
-import { getBotToken } from './runtimeEnv';
+import { getBotToken, envValue } from './runtimeEnv';
 
 const TOKEN = getBotToken() || '';
 const API = `https://api.telegram.org/bot${TOKEN}`;
-const BUCKET = process.env.SUPABASE_BUCKET || 'slips';
+const BUCKET = envValue(process.env, 'SUPABASE_BUCKET') || 'slips';
 
 async function tg<T = any>(method: string, payload: Record<string, any>): Promise<T> {
   if (!TOKEN) throw new Error('BOT_TOKEN_NOT_CONFIGURED');
