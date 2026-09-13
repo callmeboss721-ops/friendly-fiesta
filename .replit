@@ -1,0 +1,13 @@
+run = "npm run dev -- --hostname 0.0.0.0"
+entrypoint = "app/page.tsx"
+
+[deployment]
+run = ["npm", "run", "start"]
+build = ["npm", "run", "build"]
+
+[[ports]]
+localPort = 3000
+externalPort = 80
+
+[env]
+NODE_ENV = "development"
