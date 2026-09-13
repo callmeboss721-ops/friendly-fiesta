@@ -23,7 +23,8 @@ import { renderVault, renderRecent } from './vault';
 import { opsRates, applyDeskRate } from './rates';
 import { commitIncomingLock, dueSummary, settleAllDue } from './queue';
 import { outgoingLedgerRef, settleBlockReason, SKIP_TH } from './settleGuard';
-import { shouldSend, clockBkk, displayLedger, adminKeyboard, thbCard, usdt } from './format';
+import { clockBkk, displayLedger, adminKeyboard, thbCard, usdt } from './format';
+import { VaultEngine } from './vaultEngine';
 import { heroPng } from './brandCards';
 import { gateOcr } from './gate';
 import { renderGateCard } from './photo';
@@ -468,7 +469,7 @@ export async function handleCtCallback(opts: {
       }
       await answerCallback(id, `บันทึกเรียบร้อย · ${p.short_ref}`);
       const desk = p.desk_rate || (await opsRates(chatId)).desk;
-      const owed = shouldSend(thb, desk);
+      const owed = VaultEngine.verifyReceive({ thb, rate: desk, confidence: null, pinMatch: true }).expectedUsdt;
       const next = await patchSlip(p.id, {
         thb_in: thb,
         should_send: owed,
@@ -726,7 +727,7 @@ async function doPinFromSlip(
       status: matched && p.thb_in ? 'IN_READY' : p.status,
     });
     if (matched && next.thb_in) {
-      const owed = shouldSend(next.thb_in, next.desk_rate || 0);
+      const owed = VaultEngine.verifyReceive({ thb: next.thb_in, rate: next.desk_rate || 0, confidence: next.ocr_confidence, pinMatch: next.pin_match }).expectedUsdt;
       await redraw(chatId, messageId, C.cardInReady({
         review: false,
         thb: next.thb_in,
@@ -891,7 +892,7 @@ export async function handleCtText(opts: {
     const saved = await applyDeskRate(room, opts.admin.id, deskRate);
     const open = await (await import('./store')).latestOpenSlip(room, opts.userId);
     if (open && open.thb_in && (open.status === 'OCR_WEAK' || open.status === 'NEED_UNIT' || open.status === 'IN_READY' || open.status === 'IN_READY_REVIEW' || open.status === 'HOLD')) {
-      const owed = shouldSend(open.thb_in, deskRate);
+      const owed = VaultEngine.verifyReceive({ thb: open.thb_in, rate: deskRate, confidence: open.ocr_confidence, pinMatch: open.pin_match }).expectedUsdt;
       const next = await patchSlip(open.id, {
         desk_rate: deskRate,
         should_send: owed,
@@ -925,7 +926,7 @@ export async function handleCtText(opts: {
     const open = await (await import('./store')).latestOpenSlip(room, opts.userId);
     if (open && (open.status === 'OCR_WEAK' || open.status === 'NEED_UNIT' || open.status === 'IN_READY' || open.status === 'IN_READY_REVIEW' || open.status === 'HOLD')) {
       const desk = open.desk_rate || (await opsRates(room)).desk;
-      const owed = shouldSend(parsed.thb.value, desk);
+      const owed = VaultEngine.verifyReceive({ thb: parsed.thb.value, rate: desk, confidence: null, pinMatch: true }).expectedUsdt;
       const next = await patchSlip(open.id, {
         thb_in: parsed.thb.value,
         should_send: owed,

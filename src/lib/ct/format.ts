@@ -1,3 +1,4 @@
+import { divideMoney } from '../money';
 import { randomBytes } from 'crypto';
 import { escapeTelegramHtml } from '../botSecurity';
 import { RULE, quote } from './tokens';
@@ -80,8 +81,7 @@ export function rateCode(n: number | null | undefined): string {
 }
 
 export function shouldSend(thb: number, desk: number): number {
-  if (!desk || desk <= 0) return 0;
-  return Math.round((thb / desk) * 100) / 100;
+  return divideMoney(thb, desk);
 }
 
 export type BtnStyle = 'success' | 'primary' | 'danger';

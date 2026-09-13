@@ -45,3 +45,26 @@ revoke all on table public.vault_cycles from public, anon, authenticated;
 revoke all on table public.vault_audit_logs from public, anon, authenticated;
 grant all on table public.vault_cycles to service_role;
 grant all on table public.vault_audit_logs to service_role;
+
+-- Attach only new financial transactions to the room's active cycle. Existing
+-- historical records remain intact and are never rewritten by this migration.
+create or replace function public.assign_transaction_cycle()
+returns trigger language plpgsql set search_path = public as $$
+begin
+  if new.cycle_id is null and new.chat_id is not null then
+    select id into new.cycle_id
+      from public.vault_cycles
+      where chat_id = new.chat_id and status = 'OPEN'
+      order by opened_at desc
+      limit 1;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists trg_assign_transaction_cycle on public.transactions;
+create trigger trg_assign_transaction_cycle
+before insert on public.transactions
+for each row execute function public.assign_transaction_cycle();
+
+create index if not exists idx_transactions_search_ledger on public.transactions (ledger_ref);
+create index if not exists idx_transactions_search_status_created on public.transactions (status, created_at desc);

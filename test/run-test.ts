@@ -20,6 +20,7 @@ const { calculateDepositProfit } = require('../src/lib/profit');
 const { calculateFee } = require('../src/lib/fees');
 const { vaultKpi } = require('../src/lib/ct/vaultKpi');
 const { VaultEngine } = require('../src/lib/ct/vaultEngine');
+const { cycleCloseBlock } = require('../src/lib/ct/vaultCycles');
 const {
   getBotToken,
   getOcrAutoMin,
@@ -232,6 +233,8 @@ const kpiSample = vaultKpi([
 ]);
 assert(kpiSample.received === 1500 && kpiSample.pending === 4.09 && kpiSample.negative === 4.09, 'vault KPI derives unique ledger totals');
 assert(VaultEngine.verifyReceive({ thb: 1000, rate: 35.5, confidence: 95, pinMatch: true }).expectedUsdt === 28.17, 'VaultEngine uses decimal expected USDT');
+assert(cycleCloseBlock({ ...kpiSample, counts: { ...kpiSample.counts, pending: 0 }, negative: 0 }, 0) === null, 'cycle close accepts a clean ledger');
+assert(cycleCloseBlock(kpiSample, 0) === 'CYCLE_HAS_PENDING', 'cycle close blocks pending ledger entries');
 
 const explicit = parseAmounts('+500B -13.6U');
 assert(explicit.thb?.value === 500 && explicit.thb?.sign === 1, 'accepts explicit +500B');
