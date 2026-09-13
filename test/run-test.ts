@@ -283,6 +283,7 @@ const { DEFAULT_SELL_RATE: _s, DEFAULT_MARKET_RATE: _m, ...prodWithoutDefaults }
 assert(validateProductionEnvironment(prodWithoutDefaults).length === 0, 'desk rate is per-room, not required in env');
 assert(getSupabaseAdminKey(validProductionEnv)?.startsWith('sb_secret_') === true, 'accepts new Supabase secret key');
 assert(getBotToken({ TELEGRAM_bot_SECRET: validProductionEnv.BOT_TOKEN }) === validProductionEnv.BOT_TOKEN, 'accepts existing Telegram bot token alias');
+assert(getBotToken({ bot_token_api: validProductionEnv.BOT_TOKEN }) === validProductionEnv.BOT_TOKEN, 'accepts connector bot token alias');
 assert(getOcrAutoMin({ OCR_AUTO_MIN: '80' }) === 90, 'never allows OCR threshold below 90%');
 assert(
   validateProductionEnvironment({ ...validProductionEnv, OCR_AUTO_MIN: '80' })

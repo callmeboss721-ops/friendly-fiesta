@@ -43,7 +43,7 @@ export function getTelegramWebhookSecret(env: EnvMap = process.env): string | nu
 
 /** BOT_TOKEN is canonical; TELEGRAM_bot_SECRET is retained for the existing production configuration. */
 export function getBotToken(env: EnvMap = process.env): string | null {
-  return envValue(env, 'BOT_TOKEN', 'TELEGRAM_BOT_TOKEN', 'TELEGRAM_bot_SECRET');
+  return envValue(env, 'BOT_TOKEN', 'TELEGRAM_BOT_TOKEN', 'TELEGRAM_bot_SECRET', 'bot_token_api');
 }
 
 export function getOcrAutoMin(env: EnvMap = process.env): number {
