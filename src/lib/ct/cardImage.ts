@@ -118,6 +118,27 @@ function scanBeam(buf: Buffer, y: number, rgb: number[], x0 = 40, x1 = W - 40) {
   }
 }
 
+function cornerBrackets(buf: Buffer, x: number, y: number, w: number, h: number, rgb: number[], arm = 36, t = 3) {
+  fill(buf, x, y, arm, t, rgb);
+  fill(buf, x, y, t, arm, rgb);
+  fill(buf, x + w - arm, y, arm, t, rgb);
+  fill(buf, x + w - t, y, t, arm, rgb);
+  fill(buf, x, y + h - t, arm, t, rgb);
+  fill(buf, x, y + h - arm, t, arm, rgb);
+  fill(buf, x + w - arm, y + h - t, arm, t, rgb);
+  fill(buf, x + w - t, y + h - arm, t, arm, rgb);
+}
+
+function tickBar(buf: Buffer, x: number, y: number, w: number, pct: number, on: number[], off: number[]) {
+  const n = 16;
+  const gap = 4;
+  const tw = Math.max(2, Math.floor((w - gap * (n - 1)) / n));
+  const fillN = Math.round(Math.max(0, Math.min(1, pct)) * n);
+  for (let i = 0; i < n; i++) {
+    fill(buf, x + i * (tw + gap), y, tw, 8, i < fillN ? on : off);
+  }
+}
+
 function blitStill(buf: Buffer, still: StillFrame, dx: number, dy: number, dw: number, dh: number) {
   const src = still.data;
   const sw = still.width;
@@ -296,6 +317,7 @@ export function renderScanPng(opts: {
   const panelW = W - 96 - (hasReadout ? hudW + 16 : 0);
   const panelH = 360;
   fill(buf, panelX, panelY, panelW, panelH, PANEL);
+  cornerBrackets(buf, panelX + 6, panelY + 6, panelW - 12, panelH - 12, accent, 34, 3);
   if (opts.still) {
     blitStill(buf, opts.still, panelX + 8, panelY + 8, panelW - 16, panelH - 16);
     for (let y = panelY; y < panelY + panelH; y++) {
@@ -339,5 +361,6 @@ export function renderScanPng(opts: {
   }
 
   text(buf, opts.live ? 'STILL FRAME' : 'READING SLIP', 64, 524, 2, MUTED);
+  tickBar(buf, 360, 528, 280, t, accent, MUTED);
   return encodePng(buf, W, H);
 }

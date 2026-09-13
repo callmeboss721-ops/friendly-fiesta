@@ -4,8 +4,9 @@
 // ใช้ bot token เดียวกับ CE Vault (คนละ chat)
 // ============================================================
 import { supabaseAdmin } from './supabaseAdmin';
+import { getBotToken } from './runtimeEnv';
 
-const TOKEN = process.env.BOT_TOKEN || '';
+const TOKEN = getBotToken() || '';
 const CHAT_ID = process.env.NOTIFY_CHAT_ID || ''; // เว้นว่าง = ปิดแจ้งเตือน
 
 const nf = new Intl.NumberFormat('th-TH', { maximumFractionDigits: 2 });

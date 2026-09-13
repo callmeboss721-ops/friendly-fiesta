@@ -248,9 +248,11 @@ export function cardExamples() {
       method: 'sendPhoto',
       chat_id: '{{chat_id}}',
       parse_mode: 'HTML',
-      start: { photo: 'attach://og-1200x630.jpg', caption: 'CE VAULT LIVE' },
+      start: { photo: 'attach://webhook-welcome-1080x560.jpg', caption: 'ยินดีต้อนรับ (welcome)' },
       wait: { photo: 'attach://webhook-wait-1080x560.jpg', caption: 'รอโอน (waiting)' },
-      done: { photo: 'attach://webhook-success-1080x560.jpg', caption: 'โอนสำเร็จ (sent)' },
+      process: { photo: 'attach://webhook-process-1080x560.jpg', caption: 'รอสักครู่ (processing)' },
+      ocr: { photo: 'attach://webhook-ocr-1080x560.jpg', caption: 'OCR สำเร็จ (ocr ok)' },
+      done: { photo: 'attach://webhook-success-1080x560.jpg', caption: 'สำเร็จแล้ว (sent)' },
     },
   };
 }

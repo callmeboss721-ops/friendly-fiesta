@@ -8,6 +8,7 @@ import { listOpenPending } from './store';
 import { MAX_SLIP_THB } from './gate';
 import { outgoingIndexKeys } from './settleGuard';
 import { getRoom } from '../botSessions';
+import { VaultEngine } from './vaultEngine';
 
 function midnightIso(): string {
   const now = new Date();
@@ -242,6 +243,15 @@ export async function loadVault(chatId?: number | null, mode: VaultMode = 'today
   const pendingUsdt = Math.max(0, Math.round(pendingAll * 100) / 100);
   const coinDelta = Math.round((outUsdt - owedDay) * 100) / 100;
   const viewRows = inRows.filter((r) => viewTape.some((t) => t.short === r.short));
+  const kpi = VaultEngine.kpi(tape.map((row) => ({
+    ledger: row.ledger,
+    short: row.short,
+    thb: row.thb,
+    expectedUsdt: row.expectedUsdt,
+    sentUsdt: row.sentUsdt,
+    status: row.status,
+    pending: row.pending,
+  })));
 
   return {
     mode,
@@ -263,6 +273,7 @@ export async function loadVault(chatId?: number | null, mode: VaultMode = 'today
     ymd: ymdBkk(),
     tape: viewTape,
     tapeAll: tape,
+    kpi,
   };
 }
 

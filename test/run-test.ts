@@ -16,7 +16,12 @@ const {
 } = require('../src/lib/botSecurity');
 const { pickExplicitThbAmount } = require('../src/lib/ocrAmount');
 const UI = require('../src/lib/botUi');
+const { calculateDepositProfit } = require('../src/lib/profit');
+const { calculateFee } = require('../src/lib/fees');
+const { vaultKpi } = require('../src/lib/ct/vaultKpi');
+const { VaultEngine } = require('../src/lib/ct/vaultEngine');
 const {
+  getBotToken,
   getOcrAutoMin,
   getSupabaseAdminKey,
   validateProductionEnvironment,
@@ -166,6 +171,25 @@ assert(normalizeBankCode('14') === 'SCB', 'BOT 14 pads to 014 SCB');
 assert(normalizeBankCode('006') === 'KTB', 'BOT 006 maps to KTB');
 assert(normalizeBankCode('999') === null, 'unknown BOT code is not a bank');
 assert(bankLabel('004') === 'กสิกร (KBANK)', 'label from BOT code');
+const { bankIdentity, identityOfOcr, identityOfMatch, identityOfSettlement, identityOfDeposit } = require('../src/lib/ct/bankIdentity');
+assert(bankIdentity('ไทยพาณิชย์').code === 'SCB', 'identity catalog SCB');
+assert(bankIdentity('ไทยพาณิชย์').bankCode === 'SCB', 'identity business SCB');
+assert(bankIdentity('LHBANK').code === 'LH', 'LH BANK catalog code stays LH');
+assert(bankIdentity('LHBANK').localAsset.includes('/banks/lh.svg'), 'LH presentation mark');
+assert(bankIdentity('ซีไอเอ็มบี').code === 'CIMB', 'CIMB catalog');
+assert(bankIdentity('ธ.ก.ส').code === 'BAAC', 'BAAC catalog');
+assert(bankIdentity('').known === false, 'empty bank is unknown');
+assert(bankIdentity('NOPEBANK').code === 'UNKNOWN', 'unknown bank fallback catalog');
+assert(bankIdentity('NOPEBANK').bankCode === 'NOPEBANK', 'unknown keeps business token');
+const ocrId = identityOfOcr({ bank: 'กสิกร', account: '145-3-58306-2', thb: 5000, confidence: 94 });
+const depId = identityOfDeposit({ bank: 'KBANK', account: '145-3-58306-2', thb: 5000 });
+const setId = identityOfSettlement({ bank: 'KBANK', depositThb: 5000 });
+assert(ocrId.identity.bankCode === depId.identity.bankCode && depId.identity.bankCode === setId.identity.bankCode, 'OCR / deposit / settlement share identity');
+assert(ocrId.account === '145-3-58306-2', 'identity does not mask account');
+const matched = identityOfMatch('SCB', { id: '1', bank_name: 'SCB', account_number: '4371699895', label: 'เรืองรอง' });
+assert(matched.matched === true, 'match uses business bankCode');
+const { requiredUsdt: requiredUsdtFromCard } = require('../src/lib/ct/settlementMath');
+assert(requiredUsdtFromCard({ depositThb: 5000, depositCount: 1, roomRate: 42 }) === 119.05, 'identity layer does not change settlement math');
 assert(normalizeBankCode('KPLUS') === null, 'KPLUS channel is not a bank');
 assert(normalizeBankCode('SCB_EASY') === null, 'SCB_EASY channel is not a bank');
 assert(normalizeBankCode('กสิกร K PLUS') === 'KBANK', 'กสิกร still maps with app name');
@@ -199,6 +223,15 @@ assert(parseDeskRate('500') === null, '500 is not a desk rate');
 assert(computeShouldSend(5000, 42) === 119.05, `computeShouldSend(5000, 42) = 119.05 (got ${computeShouldSend(5000, 42)})`);
 assert(computeShouldSend(1000, 35.5) === 28.17, `computeShouldSend(1000, 35.5) = 28.17 (got ${computeShouldSend(1000, 35.5)})`);
 assert(computeShouldSend(0, 35.5) === 0, `computeShouldSend(0, 35.5) = 0`);
+assert(calculateDepositProfit(1000, 28.17, 35.5).netProfitThb === -0.04, 'deposit profit uses decimal rounding');
+assert(calculateFee(1000, 35.5, 28.17).expectedUsdt === 28.17, 'fee expected USDT rounds half up');
+const kpiSample = vaultKpi([
+  { ledger: 'CE-1', short: 'CE-1', thb: 1000, expectedUsdt: 28.17, sentUsdt: 28.17, status: 'SETTLED', pending: false, profitThb: 5 },
+  { ledger: 'CE-2', short: 'CE-2', thb: 500, expectedUsdt: 14.09, sentUsdt: 10, status: 'WAIT', pending: true, profitThb: 2 },
+  { ledger: 'CE-2', short: 'CE-2', thb: 500, expectedUsdt: 14.09, sentUsdt: 10, status: 'WAIT', pending: true, profitThb: 2 },
+]);
+assert(kpiSample.received === 1500 && kpiSample.pending === 4.09 && kpiSample.negative === 4.09, 'vault KPI derives unique ledger totals');
+assert(VaultEngine.verifyReceive({ thb: 1000, rate: 35.5, confidence: 95, pinMatch: true }).expectedUsdt === 28.17, 'VaultEngine uses decimal expected USDT');
 
 const explicit = parseAmounts('+500B -13.6U');
 assert(explicit.thb?.value === 500 && explicit.thb?.sign === 1, 'accepts explicit +500B');
@@ -249,6 +282,7 @@ assert(validateProductionEnvironment(validProductionEnv).length === 0, 'accepts 
 const { DEFAULT_SELL_RATE: _s, DEFAULT_MARKET_RATE: _m, ...prodWithoutDefaults } = validProductionEnv as any;
 assert(validateProductionEnvironment(prodWithoutDefaults).length === 0, 'desk rate is per-room, not required in env');
 assert(getSupabaseAdminKey(validProductionEnv)?.startsWith('sb_secret_') === true, 'accepts new Supabase secret key');
+assert(getBotToken({ TELEGRAM_bot_SECRET: validProductionEnv.BOT_TOKEN }) === validProductionEnv.BOT_TOKEN, 'accepts existing Telegram bot token alias');
 assert(getOcrAutoMin({ OCR_AUTO_MIN: '80' }) === 90, 'never allows OCR threshold below 90%');
 assert(
   validateProductionEnvironment({ ...validProductionEnv, OCR_AUTO_MIN: '80' })
@@ -393,6 +427,9 @@ const { cardExamples } = require('../src/lib/ct/cardJson');
 const pack = cardExamples();
 assert(pack.sendRichMessage.method === 'sendRichMessage', 'example method sendRichMessage');
 assert(pack.sendPhoto.wait.photo.includes('webhook-wait'), 'example wait photo');
+assert(pack.sendPhoto.ocr.photo.includes('webhook-ocr'), 'example ocr photo');
+assert(pack.sendPhoto.process.photo.includes('webhook-process'), 'example process photo');
+assert(pack.sendPhoto.start.photo.includes('webhook-welcome'), 'example welcome photo');
 assert(pack.sendRichMessage.pin.blocks.some((b: { type: string }) => b.type === 'table'), 'pin card json table');
 assert(hasBalancedTelegramHtml(inReady.text), 'IN_READY html balanced');
 assert(/[👑💎⚡✨]/u.test(inReady.text), 'IN_READY uses static brand emoji');

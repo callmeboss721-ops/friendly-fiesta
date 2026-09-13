@@ -4,7 +4,8 @@
   position:relative;
   background:
     radial-gradient(circle at 50% 38%, color-mix(in oklch, var(--gold) 22%, transparent) 0%, transparent 44%),
-    radial-gradient(circle at 50% 38%, rgba(56, 98, 180, .30) 0%, transparent 50%),
+    radial-gradient(circle at 18% 22%, rgba(88, 42, 160, .28) 0%, transparent 42%),
+    radial-gradient(circle at 82% 70%, rgba(56, 98, 180, .26) 0%, transparent 46%),
     #050814;
   color:var(--fg);
 }
@@ -15,12 +16,12 @@
   inset:0;
   z-index:0;
   background:
-    radial-gradient(1.5px 1.5px at 12% 22%, rgba(0,229,200,.55), transparent),
-    radial-gradient(1px 1px at 28% 68%, rgba(103,232,249,.4), transparent),
-    radial-gradient(1.5px 1.5px at 71% 18%, rgba(0,229,200,.45), transparent),
+    radial-gradient(1.5px 1.5px at 12% 22%, rgba(232,201,106,.55), transparent),
+    radial-gradient(1px 1px at 28% 68%, rgba(62,203,255,.4), transparent),
+    radial-gradient(1.5px 1.5px at 71% 18%, rgba(232,201,106,.45), transparent),
     radial-gradient(1px 1px at 84% 54%, rgba(255,255,255,.28), transparent),
-    radial-gradient(1.5px 1.5px at 46% 82%, rgba(0,229,200,.35), transparent),
-    radial-gradient(1px 1px at 61% 41%, rgba(103,232,249,.35), transparent),
+    radial-gradient(1.5px 1.5px at 46% 82%, rgba(180,120,255,.35), transparent),
+    radial-gradient(1px 1px at 61% 41%, rgba(62,203,255,.35), transparent),
     url("/brand/desk-atmosphere.jpg") center 38% / cover no-repeat;
   opacity:.46;
 }
@@ -33,8 +34,8 @@
   background:conic-gradient(
     from 0deg at 50% 38%,
     transparent 0 70%,
-    rgba(94,231,255,.10) 78%,
-    rgba(212,175,88,.14) 84%,
+    rgba(62,203,255,.10) 78%,
+    rgba(232,201,106,.16) 84%,
     transparent 92% 100%
   );
   -webkit-mask:radial-gradient(circle at 50% 38%, #000 0 26%, transparent 48%);

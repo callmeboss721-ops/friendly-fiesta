@@ -3,6 +3,7 @@ import { supabaseAdmin } from '../supabaseAdmin';
 import { getRoom } from '../botSessions';
 import { opsRates } from './rates';
 import { shouldSend } from './format';
+import { VaultEngine } from './vaultEngine';
 import {
   listLockedToday,
   patchSlip,
@@ -103,7 +104,7 @@ export async function commitIncomingLock(
     ? p.desk_rate
     : (await opsRates(opts.chatId)).desk;
   if (!desk || desk <= 0) throw new Error('NO_DESK_RATE');
-  const owed = shouldSend(p.thb_in, desk);
+  const owed = VaultEngine.verifyReceive({ thb: p.thb_in, rate: desk, confidence: p.ocr_confidence, pinMatch: p.pin_match, qrVerified: false }).expectedUsdt;
   const room = await getRoom(opts.chatId);
   const last4 = payeeLast4(p.account_masked);
   const r = await recordIncoming({

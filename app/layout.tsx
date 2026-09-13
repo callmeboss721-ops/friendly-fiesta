@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono, Noto_Sans_Thai_Looped, Orbitron } from 'next/font/google';
 import './globals.css';
+import './generated-tokens.css';
 import './queue-desk.css';
 import './sum-desk.css';
 import './slip-card.css';

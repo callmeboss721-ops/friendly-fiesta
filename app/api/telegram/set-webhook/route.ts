@@ -3,7 +3,7 @@
 // เรียกครั้งเดียวหลัง deploy เพื่อบอก Telegram ให้ยิง update มาที่ webhook ของเรา
 // ============================================================
 import { NextRequest, NextResponse } from 'next/server';
-import { validateProductionEnvironment } from '@/lib/runtimeEnv';
+import { getBotToken, validateProductionEnvironment } from '@/lib/runtimeEnv';
 import { requireApiKey } from '@/lib/apiAuth';
 
 export const runtime = 'nodejs';
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET!;
 
-  const token = process.env.BOT_TOKEN;
+  const token = getBotToken();
   if (!token) return NextResponse.json({ error: 'BOT_TOKEN ไม่ได้ตั้งค่า' }, { status: 500 });
 
   const base = (process.env.APP_URL || '').replace(/\/$/, '');

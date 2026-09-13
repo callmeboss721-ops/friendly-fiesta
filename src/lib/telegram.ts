@@ -3,8 +3,9 @@
 // ============================================================
 import { supabaseAdmin } from './supabaseAdmin';
 import { createHash, randomUUID } from 'crypto';
+import { getBotToken } from './runtimeEnv';
 
-const TOKEN = process.env.BOT_TOKEN || '';
+const TOKEN = getBotToken() || '';
 const API = `https://api.telegram.org/bot${TOKEN}`;
 const BUCKET = process.env.SUPABASE_BUCKET || 'slips';
 

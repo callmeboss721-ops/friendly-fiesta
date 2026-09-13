@@ -20,6 +20,21 @@ export interface ApiEndpoint {
   description?: string;
 }
 
+const SENSITIVE_FIELD = /(?:secret|token|key|password|authorization|cookie)/i;
+
+function safePayload(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(safePayload);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, item]) => [
+        key,
+        SENSITIVE_FIELD.test(key) ? '[redacted]' : safePayload(item),
+      ]),
+    );
+  }
+  return value;
+}
+
 interface EndpointState {
   status: ApiStatus;
   latencyMs?: number;
@@ -83,7 +98,7 @@ async function pingEndpoint(endpoint: ApiEndpoint): Promise<EndpointState> {
     let payload: any = null;
     try {
       const text = await res.text();
-      payload = text ? JSON.parse(text) : null;
+      payload = text ? safePayload(JSON.parse(text)) : null;
     } catch {
       /* Non-JSON response */
     }
@@ -97,7 +112,7 @@ async function pingEndpoint(endpoint: ApiEndpoint): Promise<EndpointState> {
       httpStatus,
       checkedAt: new Date().toISOString(),
       payload,
-      message: !res.ok ? `HTTP ${res.status}` : undefined,
+      message: !res.ok ? `HTTP ${res.status} — เปิดรายละเอียดเพื่อตรวจสถานะ` : undefined,
     };
   } catch (err: any) {
     const latencyMs = Date.now() - startedAt;

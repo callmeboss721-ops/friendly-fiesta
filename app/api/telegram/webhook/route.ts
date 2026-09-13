@@ -81,11 +81,16 @@ function sticker(chatId: number, key: StickerState): void {
     return;
   }
   const kind = stickerKind(key);
-  if (!kind || kind === 'wait' && key === 'PROCESSING') return;
-  const png = brandCard(kind, { hero: key, sub: kind === 'success' ? 'DONE' : 'WAIT', meta: 'CE' });
-  sendPhoto(chatId, png, {
-    text: kind === 'success' ? 'โอนสำเร็จ (sent)' : kind === 'wait' ? 'รอโอน (waiting)' : 'CE VAULT',
-  }).catch(() => undefined);
+  if (!kind) return;
+  const png = brandCard(kind, { hero: key, sub: kind === 'success' ? 'DONE' : kind === 'scan' ? 'OCR' : 'WAIT', meta: 'CE' });
+  const caption =
+    kind === 'success' ? 'สำเร็จแล้ว (sent)'
+    : kind === 'wait' ? 'รอโอน (waiting)'
+    : kind === 'scan' ? 'OCR สำเร็จ (ocr ok)'
+    : kind === 'process' ? 'รอสักครู่ (processing)'
+    : kind === 'start' ? 'ยินดีต้อนรับ (welcome)'
+    : 'CE VAULT';
+  sendPhoto(chatId, png, { text: caption }).catch(() => undefined);
 }
 
 export const runtime = 'nodejs';

@@ -5,29 +5,28 @@ import ApiMonitor, { type ApiEndpoint } from '@/components/ApiMonitor';
 import { saveTyphoonKey } from '@/lib/desk/actions';
 
 const SEED: ApiEndpoint[] = [
-  { id: 'health', name: 'สุขภาพ', url: '/api/health', method: 'GET', category: 'core' },
-  { id: 'vault', name: 'โต๊ะ', url: '/api/dashboard/vault?mode=pending', method: 'GET', category: 'dashboard' },
-  { id: 'hook', name: 'Webhook', url: '/api/telegram/webhook', method: 'GET', category: 'core' },
+  { id: 'health', name: 'สถานะระบบ', url: '/api/health', method: 'GET', category: 'core', icon: '♥', description: 'ตรวจ Supabase, Telegram webhook และ environment ที่จำเป็น' },
+  { id: 'vault', name: 'Vault queue', url: '/api/dashboard/vault?mode=pending', method: 'GET', category: 'dashboard', icon: '▣', description: 'ตรวจ queue และข้อมูลโต๊ะที่ต้องใช้ session ผู้ดูแล' },
+  { id: 'rooms', name: 'ห้อง Telegram', url: '/api/dashboard/rooms', method: 'GET', category: 'dashboard', icon: '◉', description: 'ตรวจ room settings และห้องที่กำลังใช้งาน' },
+  { id: 'bank-accounts', name: 'บัญชีธนาคาร', url: '/api/admin/bank-accounts', method: 'GET', category: 'core', icon: '◫', description: 'ตรวจ Supabase admin client และบัญชีที่ใช้รับเงิน' },
 ];
 
 export default function DeskApiPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [remote, setRemote] = useState<ApiEndpoint[] | null>(null);
   const [typhoonReady, setTyphoonReady] = useState(false);
   const [typhoonKey, setTyphoonKey] = useState('');
   const [saving, setSaving] = useState(false);
   const [note, setNote] = useState('');
 
+  // The monitor intentionally uses this fixed read-only baseline. It prevents a
+  // stale saved endpoint (such as a webhook POST) from triggering side effects.
   useEffect(() => {
     if (!open) return;
     fetch('/api/admin/settings', { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((j) => {
-        const list = j?.data?.apiEndpoints;
-        if (Array.isArray(list) && list.length) setRemote(list);
-        setTyphoonReady(Boolean(j?.data?.typhoonReady));
-      })
-      .catch(() => {});
+      .then((response) => response.json())
+      .then((body) => setTyphoonReady(Boolean(body?.data?.typhoonReady)))
+      .catch(() => setTyphoonReady(false));
   }, [open]);
+
 
   async function saveTyphoon() {
     const value = typhoonKey.trim();
@@ -81,7 +80,8 @@ export default function DeskApiPanel({ open, onClose }: { open: boolean; onClose
         </div>
         {note ? <p>{note}</p> : null}
       </form>
-      <ApiMonitor endpoints={remote ?? SEED} storageKey="ct.apiMonitor.v2" />
+      <p className="desk-api-panel__hint">ตรวจข้อมูลจริงจาก production ทุก 30 วินาที — Webhook ตรวจผ่านสถานะระบบ เพื่อไม่ส่ง request เปล่าไปยัง Telegram</p>
+      <ApiMonitor endpoints={SEED} autoRefreshMs={30_000} storageKey="ct.apiMonitor.v3" />
     </section>
   );
 }

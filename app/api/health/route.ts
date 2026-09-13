@@ -31,16 +31,16 @@ export async function GET(req: NextRequest) {
   const forceWebhook = req.nextUrl.searchParams.get('forceWebhook') === '1';
 
   let db: 'ok' | 'error' = 'ok';
-  let detail: string | undefined;
+  let detail: 'DATABASE_QUERY_FAILED' | undefined;
   try {
     const { error } = await supabaseAdmin.from('admins').select('id').limit(1);
     if (error) {
       db = 'error';
-      detail = error.message;
+      detail = 'DATABASE_QUERY_FAILED';
     }
   } catch (e: any) {
     db = 'error';
-    detail = e?.message;
+    detail = 'DATABASE_QUERY_FAILED';
   }
 
   const webhook = fatal.length === 0

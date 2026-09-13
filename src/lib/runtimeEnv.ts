@@ -41,6 +41,11 @@ export function getTelegramWebhookSecret(env: EnvMap = process.env): string | nu
   return envValue(env, 'TELEGRAM_WEBHOOK_SECRET');
 }
 
+/** BOT_TOKEN is canonical; TELEGRAM_bot_SECRET is retained for the existing production configuration. */
+export function getBotToken(env: EnvMap = process.env): string | null {
+  return envValue(env, 'BOT_TOKEN', 'TELEGRAM_BOT_TOKEN', 'TELEGRAM_bot_SECRET');
+}
+
 export function getOcrAutoMin(env: EnvMap = process.env): number {
   const parsed = Number(envValue(env, 'OCR_AUTO_MIN') ?? '90');
   if (!Number.isFinite(parsed) || parsed < 90 || parsed > 100) return 90;
@@ -96,7 +101,8 @@ export function validateWebhookEnvironment(env: EnvMap = process.env): ConfigIss
     'SUPABASE_SERVICE_KEY',
   ]);
   const apiSecret = requireValue(issues, env, 'API_SECRET');
-  const botToken = requireValue(issues, env, 'BOT_TOKEN');
+  const botToken = getBotToken(env);
+  if (!botToken || isPlaceholderValue(botToken)) issues.push({ key: 'BOT_TOKEN', code: 'missing' });
   const webhookSecret = requireValue(issues, env, 'TELEGRAM_WEBHOOK_SECRET');
   requireValue(issues, env, 'ADMIN_TELEGRAM_IDS');
 

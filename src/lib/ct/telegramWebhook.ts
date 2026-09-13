@@ -1,3 +1,4 @@
+import { getBotToken } from '../runtimeEnv';
 export type WebhookState = {
   ok: boolean;
   url: string | null;
@@ -31,7 +32,7 @@ function lastErrorAt(info: any): string | null {
 }
 
 export async function readTelegramWebhook(): Promise<WebhookState> {
-  const token = process.env.BOT_TOKEN;
+  const token = getBotToken();
   if (!token) return { ok: false, url: null, pending: null, error: 'NO_BOT_TOKEN', lastError: null, lastErrorAt: null };
   try {
     const res = await fetch(`https://api.telegram.org/bot${token}/getWebhookInfo`);
@@ -61,7 +62,7 @@ export async function readTelegramWebhook(): Promise<WebhookState> {
 }
 
 export async function ensureTelegramWebhook(force = false): Promise<WebhookState & { set: boolean }> {
-  const token = process.env.BOT_TOKEN;
+  const token = getBotToken();
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
   const wanted = wantedUrl();
   if (!token || !secret || !wanted) {

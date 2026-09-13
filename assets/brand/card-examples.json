@@ -27,6 +27,12 @@
               "callback_data": "room:list"
             },
             {
+              "text": "เปิด VAULT",
+              "web_app": {
+                "url": "https://ce-empire-miniapp.vercel.app/?screen=vault"
+              }
+            },
+            {
               "text": "เปิดโต๊ะ",
               "style": "link",
               "url": "https://ce-vault.vercel.app"
@@ -225,6 +231,12 @@
               "text": "บันทึกส่งรวม",
               "style": "danger",
               "callback_data": "vault:batch"
+            },
+            {
+              "text": "เปิด VAULT",
+              "web_app": {
+                "url": "https://ce-empire-miniapp.vercel.app/?screen=vault"
+              }
             }
           ]
         }
@@ -310,6 +322,12 @@
               "callback_data": "vault:today"
             },
             {
+              "text": "เปิด VAULT",
+              "web_app": {
+                "url": "https://ce-empire-miniapp.vercel.app/?screen=done"
+              }
+            },
+            {
               "text": "เปิดโต๊ะ",
               "style": "link",
               "url": "https://ce-vault.vercel.app"
@@ -377,9 +395,95 @@
               "callback_data": "room:list"
             },
             {
+              "text": "เปิด VAULT",
+              "web_app": {
+                "url": "https://ce-empire-miniapp.vercel.app/?screen=vault"
+              }
+            },
+            {
               "text": "เปิดโต๊ะ",
               "style": "link",
               "url": "https://ce-vault.vercel.app"
+            }
+          ]
+        }
+      ]
+    },
+    "settlement": {
+      "blocks": [
+        {
+          "type": "heading",
+          "size": 2,
+          "text": "เคลียร์ยอด"
+        },
+        {
+          "type": "paragraph",
+          "text": "READY · 2 รายการ"
+        },
+        {
+          "type": "table",
+          "is_bordered": true,
+          "is_compact": true,
+          "is_striped": true,
+          "cells": [
+            [
+              {
+                "text": "รายการ",
+                "is_header": true
+              },
+              {
+                "text": "ยอด",
+                "is_header": true
+              }
+            ],
+            [
+              {
+                "text": "ฝากรวม"
+              },
+              {
+                "text": "10,000.00 THB"
+              }
+            ],
+            [
+              {
+                "text": "ต้องส่ง @ 36.70"
+              },
+              {
+                "text": "272.48 USDT"
+              }
+            ],
+            [
+              {
+                "text": "ส่งแล้ว"
+              },
+              {
+                "text": "รอส่ง"
+              }
+            ],
+            [
+              {
+                "text": "ส่วนต่าง"
+              },
+              {
+                "text": "รอคำนวณ"
+              }
+            ]
+          ]
+        },
+        {
+          "type": "buttons",
+          "align": "left",
+          "buttons": [
+            {
+              "text": "บันทึกส่งรวม",
+              "style": "danger",
+              "callback_data": "vault:batch"
+            },
+            {
+              "text": "เปิด VAULT",
+              "web_app": {
+                "url": "https://ce-empire-miniapp.vercel.app/?screen=vault&thb=10000&n=2&rate=36.7&st=READY"
+              }
             }
           ]
         }
@@ -461,16 +565,24 @@
     "chat_id": "{{chat_id}}",
     "parse_mode": "HTML",
     "start": {
-      "photo": "attach://og-1200x630.jpg",
-      "caption": "CE VAULT LIVE"
+      "photo": "attach://webhook-welcome-1080x560.jpg",
+      "caption": "ยินดีต้อนรับ (welcome)"
     },
     "wait": {
       "photo": "attach://webhook-wait-1080x560.jpg",
       "caption": "รอโอน (waiting)"
     },
+    "process": {
+      "photo": "attach://webhook-process-1080x560.jpg",
+      "caption": "รอสักครู่ (processing)"
+    },
+    "ocr": {
+      "photo": "attach://webhook-ocr-1080x560.jpg",
+      "caption": "OCR สำเร็จ (ocr ok)"
+    },
     "done": {
       "photo": "attach://webhook-success-1080x560.jpg",
-      "caption": "โอนสำเร็จ (sent)"
+      "caption": "สำเร็จแล้ว (sent)"
     }
   }
 }
