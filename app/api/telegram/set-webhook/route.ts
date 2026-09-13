@@ -28,11 +28,12 @@ export async function POST(req: NextRequest) {
   const token = getBotToken();
   if (!token) return NextResponse.json({ error: 'BOT_TOKEN ไม่ได้ตั้งค่า' }, { status: 500 });
 
-  const base = (process.env.APP_URL || '').replace(/\/$/, '');
-  if (!base.startsWith('https://')) {
+  const configuredBase = (process.env.APP_URL || '').replace(/\/$/, '');
+  const base = configuredBase || 'https://installation-plum.vercel.app';
+  if (base !== 'https://installation-plum.vercel.app' && !base.startsWith('https://')) {
     return NextResponse.json({ error: 'APP_URL ต้องเป็น HTTPS URL ที่เข้าถึงได้จาก Telegram' }, { status: 503 });
   }
-  const webhookUrl = `${base}/api/telegram/webhook`;
+  const webhookUrl = 'https://installation-plum.vercel.app/api/telegram/webhook';
 
   const res = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
     method: 'POST',

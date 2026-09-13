@@ -16,7 +16,7 @@ const FILE: Record<BrandKind, string> = {
 function fromDisk(name: string): Buffer | null {
   for (const root of [join(process.cwd(), 'assets/brand'), join(process.cwd(), 'public/brand')]) {
     try {
-      return readFileSync(join(root, name));
+      return readFileSync(/*turbopackIgnore: true*/ join(/*turbopackIgnore: true*/ root, name));
     } catch {
       /* next */
     }

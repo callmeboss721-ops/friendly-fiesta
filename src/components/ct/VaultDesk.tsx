@@ -370,7 +370,7 @@ export default function VaultDesk() {
           <span className="ce-mark">
             <Image src="/brand/ce-mark-512.png" width={36} height={36} alt="" sizes="36px" priority unoptimized />
           </span>
-          <span className="ops-title">CE Vault</span>
+          <span className="ops-title">CE Empire <small>PRIVATE DESK</small></span>
           <span className={`pill hidden sm:inline-flex ${live ? 'pill-done' : 'pill-wait'}`}>
             {live ? 'สด' : 'รีเฟรช'}
           </span>
@@ -410,6 +410,13 @@ export default function VaultDesk() {
           ))}
         </div>
       )}
+      <section className="ce-hero" aria-label="CE Empire Private Desk">
+        <img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Image-11E5C2A3-l0JPkMcHOapzslOOIKiNhXCN23dqno.jpeg" alt="CE Empire Private Desk หุ่นยนต์ผู้ช่วยดูแลการเงิน" />
+        <div className="ce-hero__copy">
+          <span className="eyebrow">PRIVATE DESK · ORC ONLINE</span>
+          <span>ฝาก · รอเคลียร์ · ส่งแล้ว ในจอเดียว</span>
+        </div>
+      </section>
       <p className="color-key">
         <span><i className="in" />เขียว = ฝาก</span>
         <span><i className="out" />แดง = โอน</span>

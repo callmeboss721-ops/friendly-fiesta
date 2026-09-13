@@ -46,7 +46,7 @@ export function skeletonRead(): OutgoingMessage {
 }
 
 export function skeletonVault(): OutgoingMessage {
-  return msg(head('สรุปยอด', 'กำลังโหลด (loading)'));
+  return msg(head('สรุปยอด', 'กำลังอ่านยอดล่าสุดจาก VAULT'));
 }
 
 export function skeletonSettle(ledger: string, usdtAmt: number): OutgoingMessage {

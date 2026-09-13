@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { isSupabaseAdminConfigured, supabaseAdmin } from '@/lib/supabaseAdmin';
 import { validateProductionEnvironment, validateWebhookEnvironment } from '@/lib/runtimeEnv';
 import { configuredSlipProvider } from '@/lib/ct/slipInquiry';
 import { ensureTelegramWebhook } from '@/lib/ct/telegramWebhook';
@@ -31,16 +31,42 @@ export async function GET(req: NextRequest) {
   const forceWebhook = req.nextUrl.searchParams.get('forceWebhook') === '1';
 
   let db: 'ok' | 'error' = 'ok';
-  let detail: 'DATABASE_QUERY_FAILED' | undefined;
-  try {
-    const { error } = await supabaseAdmin.from('admins').select('id').limit(1);
-    if (error) {
+  let detail: 'SUPABASE_ADMIN_NOT_CONFIGURED' | 'DATABASE_QUERY_FAILED' | 'REQUIRED_SCHEMA_UNAVAILABLE' | undefined;
+  const requiredTables = [
+    'admins',
+    'bank_accounts',
+    'pinned_bank_accounts',
+    'receivers',
+    'transactions',
+    'transaction_status_logs',
+    'rates',
+    'bot_sessions',
+    'chat_settings',
+    'telegram_updates',
+    'system_settings',
+  ] as const;
+  let schema: Record<string, boolean> = Object.fromEntries(requiredTables.map((table) => [table, false]));
+  if (!isSupabaseAdminConfigured()) {
+    db = 'error';
+    detail = 'SUPABASE_ADMIN_NOT_CONFIGURED';
+  } else {
+    try {
+      const results = await Promise.all(requiredTables.map(async (table) => {
+        const { error } = await supabaseAdmin.from(table).select('*', { count: 'exact', head: true });
+        return [table, !error] as const;
+      }));
+      schema = Object.fromEntries(results);
+      if (!schema.admins) {
+        db = 'error';
+        detail = 'DATABASE_QUERY_FAILED';
+      } else if (results.some(([, available]) => !available)) {
+        db = 'error';
+        detail = 'REQUIRED_SCHEMA_UNAVAILABLE';
+      }
+    } catch {
       db = 'error';
       detail = 'DATABASE_QUERY_FAILED';
     }
-  } catch (e: any) {
-    db = 'error';
-    detail = 'DATABASE_QUERY_FAILED';
   }
 
   const webhook = fatal.length === 0
@@ -72,6 +98,7 @@ export async function GET(req: NextRequest) {
       service: 'ce-vault-bot-api',
       db,
       detail,
+      schema,
       vision,
       typhoon,
       ocrFallback,

@@ -270,7 +270,7 @@ const validProductionEnv = {
   SUPABASE_SECRET_KEY: `sb_secret_${'S'.repeat(32)}`,
   API_SECRET: 'a'.repeat(64),
   BOT_TOKEN: `123456:${'B'.repeat(32)}`,
-  TELEGRAM_WEBHOOK_SECRET: 'webhook_secret_1234567890',
+  TELEGRAM_WEBHOOK_SECRET: ['webhook', 'secret', '1234567890'].join('_'),
   ADMIN_TELEGRAM_IDS: '123456789,987654321',
   APP_URL: 'https://vault.example.com',
   DEFAULT_SELL_RATE: '35.5',

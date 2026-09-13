@@ -3,17 +3,21 @@
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdminKey, getSupabaseUrl } from './runtimeEnv';
 
-const supabaseUrl = getSupabaseUrl() || 'http://localhost';
-const serviceRoleKey = getSupabaseAdminKey() || 'build-time-placeholder';
+const supabaseUrl = getSupabaseUrl();
+const serviceRoleKey = getSupabaseAdminKey();
+const hasSupabaseAdminConfig = Boolean(supabaseUrl && serviceRoleKey);
 
-// เตือนชัดๆ ใน log ถ้า runtime จริงยังไม่ได้ตั้งคีย์ (จะได้ไม่ debug เงียบๆ เป็นวัน)
-if (serviceRoleKey === 'build-time-placeholder' && process.env.NODE_ENV === 'production') {
-  console.error(
-    '[supabaseAdmin] ⚠️ ไม่พบ service role key — ตั้ง SUPABASE_SERVICE_ROLE_KEY ใน ENV ' +
-      'หรือ SUPABASE_SECRET_KEY ใน ENV (การอ่าน/เขียน DB ทั้งหมดจะล้มเหลว)',
-  );
+// Keep module initialization build-safe, but never pretend the runtime is configured.
+if (!hasSupabaseAdminConfig && process.env.NODE_ENV === 'production') {
+  console.error('[supabaseAdmin] Supabase admin configuration is missing; set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY (or legacy SUPABASE_SERVICE_ROLE_KEY).');
 }
 
-export const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-  auth: { persistSession: false, autoRefreshToken: false },
-});
+export function isSupabaseAdminConfigured(): boolean {
+  return hasSupabaseAdminConfig;
+}
+
+export const supabaseAdmin = createClient(
+  supabaseUrl ?? 'http://127.0.0.1:54321',
+  serviceRoleKey ?? 'missing-supabase-admin-key',
+  { auth: { persistSession: false, autoRefreshToken: false } },
+);
