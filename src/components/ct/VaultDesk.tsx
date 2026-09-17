@@ -410,30 +410,22 @@ export default function VaultDesk() {
           ))}
         </div>
       )}
-      <section className="ce-hero" aria-label="CE Empire Private Desk">
-        <img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Image-11E5C2A3-l0JPkMcHOapzslOOIKiNhXCN23dqno.jpeg" alt="CE Empire Private Desk หุ่นยนต์ผู้ช่วยดูแลการเงิน" />
-        <div className="ce-hero__copy">
-          <span className="eyebrow">PRIVATE DESK · ORC ONLINE</span>
-          <span>ฝาก · รอเคลียร์ · ส่งแล้ว ในจอเดียว</span>
-        </div>
-      </section>
-      <p className="color-key">
-        <span><i className="in" />เขียว = ฝาก</span>
-        <span><i className="out" />แดง = โอน</span>
-      </p>
       <div className="desk-banner" aria-label="ผลรวมวันนี้">
-        <article className="is-in">
-          <p>ฝาก</p>
+        <article className="desk-banner__primary">
+          <p>ยอดรับ</p>
           <strong>{money(v?.inThb ?? 0)}</strong>
+          <span className="desk-banner__unit">THB · {v?.inCount ?? 0} รายการ</span>
         </article>
-        <article className="is-out">
-          <p>ส่งแล้ว</p>
-          <strong>{money(sent, 2)}</strong>
-        </article>
-        <article className="is-due">
-          <p>ค้างเคลียร์</p>
-          <strong>{money(settleDue, 2)}</strong>
-        </article>
+        <div className="desk-banner__secondary">
+          <article className="is-out">
+            <p>ส่งแล้ว</p>
+            <strong>{money(sent, 2)}</strong>
+          </article>
+          <article className={settleDue <= 0 ? 'is-clear' : 'is-due'}>
+            <p>ค้างเคลียร์</p>
+            <strong>{money(settleDue, 2)}</strong>
+          </article>
+        </div>
       </div>
       {screen === 'OPERATIONS' && <section className="desk-settle" data-state={settleSt} aria-label="เคลียร์ยอด">
         <header className="desk-settle__head">

@@ -30,8 +30,8 @@
   color:var(--fg,#e8edf7);border:1px solid var(--qd-line);background:transparent;font-weight:600;
 }
 .qd-pill.is-on{
-  color:#04140c;border-color:transparent;font-weight:700;
-  background:var(--qd-emerald);
+  color:var(--qd-emerald);border-color:color-mix(in srgb, var(--qd-emerald) 55%, transparent);font-weight:700;
+  background:color-mix(in srgb, var(--qd-emerald) 18%, transparent);
 }
 .qd-balance{
   background:var(--qd-card);border-radius:14px;padding:18px 16px;margin-bottom:14px;
